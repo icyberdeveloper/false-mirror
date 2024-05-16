@@ -28,5 +28,4 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: |
-            ghcr.io/user/app:latest
-            ghcr.io/user/app:$(date +%s)   
+            ghcr.io/user/false-mirror:latest
