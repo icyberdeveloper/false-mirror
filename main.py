@@ -50,12 +50,12 @@ def main():
         logger.info('Init db...')
         db = TinyDB(db_path)
 
-        logger.info('Starting anilibria...')
-        anilibria_series = anilibria_client.get_series(db, anilibria_torrent_mirror, anilibria_series_names, proxies)
-        transmission.send_to_transmission(
-           db, transmission_host, transmission_port,
-           anilibria_download_dir, anilibria_series
-        )
+        # logger.info('Starting anilibria...')
+        # anilibria_series = anilibria_client.get_series(db, anilibria_torrent_mirror, anilibria_series_names, proxies)
+        # transmission.send_to_transmission(
+        #    db, transmission_host, transmission_port,
+        #    anilibria_download_dir, anilibria_series
+        # )
 
         logger.info('Starting lostfilm...')
         lostfilm_series = lostfilm_client.get_series(
