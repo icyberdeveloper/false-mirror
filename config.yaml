@@ -3,7 +3,7 @@ global:
   db_path: '/storage/db.json'
   proxy:
     enabled: true
-    host: '172.18.0.3'
+    host: '127.0.0.1'
     port: 1080
 
 
