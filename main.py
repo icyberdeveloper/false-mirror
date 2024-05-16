@@ -21,10 +21,12 @@ def read_config(path):
 
 def main():
     while True:
+
         logger.info('Starting loop...')
         logger.info('Reading config...')
         cfg = read_config('config.yaml')
 
+        sleep_interval = cfg['global']['interval']
         db_path = cfg['global']['db_path']
 
         is_proxy_enabled = cfg['global']['proxy']['enabled']
@@ -49,26 +51,27 @@ def main():
 
         logger.info('Init db...')
         db = TinyDB(db_path)
+        try:
+            # logger.info('Starting anilibria...')
+            # anilibria_series = anilibria_client.get_series(db, anilibria_torrent_mirror, anilibria_series_names, proxies)
+            # transmission.send_to_transmission(
+            #    db, transmission_host, transmission_port,
+            #    anilibria_download_dir, anilibria_series
+            # )
 
-        # logger.info('Starting anilibria...')
-        # anilibria_series = anilibria_client.get_series(db, anilibria_torrent_mirror, anilibria_series_names, proxies)
-        # transmission.send_to_transmission(
-        #    db, transmission_host, transmission_port,
-        #    anilibria_download_dir, anilibria_series
-        # )
+            logger.info('Starting lostfilm...')
+            lostfilm_series = lostfilm_client.get_series(
+                db, lostfilm_torrent_mirror, lostfilm_lf_session, lostfilm_series_names, proxies
+            )
+            transmission.send_to_transmission(
+                db, transmission_host, transmission_port,
+                lostfilm_download_dir, lostfilm_series
+            )
+        except Exception as e:
+            logger.error(e)
 
-        logger.info('Starting lostfilm...')
-        lostfilm_series = lostfilm_client.get_series(
-            db, lostfilm_torrent_mirror, lostfilm_lf_session, lostfilm_series_names, proxies
-        )
-        transmission.send_to_transmission(
-            db, transmission_host, transmission_port,
-            lostfilm_download_dir, lostfilm_series
-        )
-
-        minutes = cfg['global']['interval']
-        logger.info('Sleep for ' + minutes + ' minutes')
-        time.sleep(minutes * 60)
+        logger.info('Sleep for ' + sleep_interval + ' minutes')
+        time.sleep(sleep_interval * 60)
 
 
 if __name__ == '__main__':
