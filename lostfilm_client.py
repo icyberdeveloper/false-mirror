@@ -1,21 +1,21 @@
 from bs4 import BeautifulSoup
-import requests
 import logging
 import re
 
 import utils
 import series as s
+import network
 
 
 logger = logging.getLogger(__name__)
 
 
-def get_series(db, torrent_mirror, lostfilm_lf_session, series_names):
+def get_series(db, torrent_mirror, lostfilm_lf_session, series_names, proxies):
     series_list = []
     for series_name in series_names:
         logger.info('Search show - {}'.format(series_name))
         full_url = torrent_mirror + '/series/' + series_name + '/seasons/'
-        res = requests.get(full_url)
+        res = network.get(full_url, proxies=proxies)
 
         series_ids = re.findall(r"PlayEpisode\('(\d+)'\)", res.text)
         series_ids = drop_seasons_id(series_ids)
@@ -26,11 +26,11 @@ def get_series(db, torrent_mirror, lostfilm_lf_session, series_names):
             logger.info('Produce show with id - {}'.format(series_id))
             torrent_page = torrent_mirror + '/v_search.php?a=' + series_id
             cookies = {'lf_session': lostfilm_lf_session}
-            res = requests.get(torrent_page, cookies=cookies)
+            res = network.get(torrent_page, cookies=cookies, proxies=proxies)
             soup = BeautifulSoup(res.text, "html.parser")
-            reddirect_url  = soup.find('a').attrs['href']
+            reddirect_url = soup.find('a').attrs['href']
 
-            res = requests.get(reddirect_url)
+            res = network.get(reddirect_url, proxies=proxies)
             soup = BeautifulSoup(res.text, "html.parser")
             torrent_url = soup.find(tag_with_1080p_link).attrs['href']
 

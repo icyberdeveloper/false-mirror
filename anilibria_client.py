@@ -18,8 +18,8 @@ def get_best_quality(torrents):
     return torrents[0]
 
 
-def get_series(db, torrent_mirror, anime_names):
-    client = AniLibriaClient()
+def get_series(db, torrent_mirror, anime_names, proxies):
+    client = AniLibriaClient(proxy=proxies.get('http'))
     series_list = []
 
     for anime_name in anime_names:
