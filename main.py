@@ -4,7 +4,7 @@ import logging
 from tinydb import TinyDB
 
 import lostfilm_client
-import transmission
+from transmission import Transmission
 import anilibria_client
 
 
@@ -52,21 +52,20 @@ def main():
         logger.info('Init db...')
         db = TinyDB(db_path)
         try:
+            transmission = Transmission(transmission_host, transmission_port)
+
             logger.info('Starting anilibria...')
-            anilibria_series = anilibria_client.get_series(db, anilibria_torrent_mirror, anilibria_series_names, proxies)
-            transmission.send_to_transmission(
-               db, transmission_host, transmission_port,
-               anilibria_download_dir, anilibria_series
+            anilibria_series = anilibria_client.get_series(
+                db, transmission, anilibria_download_dir, anilibria_torrent_mirror, anilibria_series_names, proxies
             )
+            logger.info('Complete anilibria, update ' + str(len(anilibria_series)) + ' series')
 
             logger.info('Starting lostfilm...')
             lostfilm_series = lostfilm_client.get_series(
-                db, lostfilm_torrent_mirror, lostfilm_lf_session, lostfilm_series_names, proxies
+                db, transmission, lostfilm_download_dir, lostfilm_torrent_mirror, lostfilm_lf_session, lostfilm_series_names, proxies
             )
-            transmission.send_to_transmission(
-                db, transmission_host, transmission_port,
-                lostfilm_download_dir, lostfilm_series
-            )
+            logger.info('Complete lostfilm, update ' + str(len(lostfilm_series)) + ' series')
+
         except Exception as e:
             logger.exception(e)
 

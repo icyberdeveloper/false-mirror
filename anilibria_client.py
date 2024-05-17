@@ -18,7 +18,7 @@ def get_best_quality(torrents):
     return torrents[0]
 
 
-def get_series(db, torrent_mirror, anime_names, proxies):
+def get_series(db, transmission, anilibria_download_dir, torrent_mirror, anime_names, proxies):
     client = AniLibriaClient(proxy=proxies.get('http'))
     series_list = []
 
@@ -45,8 +45,12 @@ def get_series(db, torrent_mirror, anime_names, proxies):
             logger.info('Produce anime with title - {}'.format(name))
 
             series = s.Series(torrent_url, name)
-            series_list.append(series)
+
+            if not utils.is_series_exist(db, series):
+                transmission.send_to_transmission([series], anilibria_download_dir)
+                db.insert({'name': series.name, 'url': series.torrent_url})
+                series_list.append(series)
 
     asyncio.run(client.close())
 
-    return utils.filter_torrents_if_exists(db, series_list)
+    return series_list

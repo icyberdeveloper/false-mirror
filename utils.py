@@ -11,3 +11,9 @@ def filter_torrents_if_exists(db, series_list):
             filtered_series.append(series)
 
     return filtered_series
+
+
+def is_series_exist(db, series):
+    series_entity = Query()
+    res = db.search(series_entity.url == series.torrent_url)
+    return len(res) != 0

@@ -1,10 +1,12 @@
 import requests
 import logging
+from retry import retry
 
 
 logger = logging.getLogger(__name__)
 
 
+@retry(Exception, tries=10, delay=5, backoff=2, logger=logger)
 def get(url, cookies=None, proxies=None):
     try:
         res = requests.get(url, cookies=cookies, proxies=proxies)

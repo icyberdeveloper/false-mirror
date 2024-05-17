@@ -10,7 +10,7 @@ import network
 logger = logging.getLogger(__name__)
 
 
-def get_series(db, torrent_mirror, lostfilm_lf_session, series_names, proxies):
+def get_series(db, transmission, lostfilm_download_dir, torrent_mirror, lostfilm_lf_session, series_names, proxies):
     series_list = []
 
     logger.info('Start update {} shows'.format(len(series_names)))
@@ -37,9 +37,13 @@ def get_series(db, torrent_mirror, lostfilm_lf_session, series_names, proxies):
             torrent_url = soup.find(tag_with_1080p_link).attrs['href']
 
             series = s.Series(torrent_url, series_id)
-            series_list.append(series)
 
-    return utils.filter_torrents_if_exists(db, series_list)
+            if not utils.is_series_exist(db, series):
+                transmission.send_to_transmission([series], lostfilm_download_dir)
+                db.insert({'name': series.name, 'url': series.torrent_url})
+                series_list.append(series)
+
+    return series_list
 
 
 def drop_seasons_id(series_ids):
