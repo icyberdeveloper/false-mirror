@@ -70,7 +70,7 @@ def main():
         except Exception as e:
             logger.error(e)
 
-        logger.info('Sleep for ' + sleep_interval + ' minutes')
+        logger.info('Sleep for ' + str(sleep_interval) + ' minutes')
         time.sleep(sleep_interval * 60)
 
 
