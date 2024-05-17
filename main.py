@@ -54,11 +54,11 @@ def main():
         try:
             transmission = Transmission(transmission_host, transmission_port)
 
-            logger.info('Starting anilibria...')
-            anilibria_series = anilibria_client.get_series(
-                db, transmission, anilibria_download_dir, anilibria_torrent_mirror, anilibria_series_names, proxies
-            )
-            logger.info('Complete anilibria, update ' + str(len(anilibria_series)) + ' series')
+            #logger.info('Starting anilibria...')
+            #anilibria_series = anilibria_client.get_series(
+            #    db, transmission, anilibria_download_dir, anilibria_torrent_mirror, anilibria_series_names, proxies
+            #)
+            #logger.info('Complete anilibria, update ' + str(len(anilibria_series)) + ' series')
 
             logger.info('Starting lostfilm...')
             lostfilm_series = lostfilm_client.get_series(
