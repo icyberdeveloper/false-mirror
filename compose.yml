@@ -10,10 +10,7 @@ services:
     volumes:
       - /mnt/video/lostfilm:/lostfilm
       - /mnt/video/anilibria:/anilibria
-    ports:
-      - 9091:9091
-      - 51413:51413
-      - 51413:51413/udp
+    network_mode: "host"
     restart: unless-stopped
 
   false-mirror:
@@ -22,4 +19,5 @@ services:
     container_name: false-mirror
     volumes:
       - /storage:/storage
+    network_mode: "host"
     restart: unless-stopped
