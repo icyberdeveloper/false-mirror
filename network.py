@@ -15,5 +15,4 @@ def get(url, cookies=None, proxies=None):
         return res
     except requests.exceptions.RequestException as e:
         logger.error('GET Request failed with url: {}'.format(url))
-        logger.exception(e)
-        return None
+        raise e

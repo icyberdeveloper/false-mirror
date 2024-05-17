@@ -68,7 +68,7 @@ def main():
                 lostfilm_download_dir, lostfilm_series
             )
         except Exception as e:
-            logger.error(e)
+            logger.exception(e)
 
         logger.info('Sleep for ' + str(sleep_interval) + ' minutes')
         time.sleep(sleep_interval * 60)
