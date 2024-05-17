@@ -2,6 +2,7 @@ import base64
 import requests
 import logging
 import transmissionrpc
+from retry import retry
 
 
 logger = logging.getLogger(__name__)
@@ -12,6 +13,7 @@ class Transmission:
         logger.info('Setup transmission...')
         self.transmission = transmissionrpc.Client(address=host, port=port)
 
+    @retry(Exception, tries=10, delay=5, backoff=2, logger=logger)
     def send_to_transmission(self, filtered_series, download_dir):
         logger.info('Start processing {} series for {}'.format(len(filtered_series), download_dir))
 
