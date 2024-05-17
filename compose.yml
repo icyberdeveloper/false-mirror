@@ -10,6 +10,7 @@ services:
     volumes:
       - /mnt/video/lostfilm:/lostfilm
       - /mnt/video/anilibria:/anilibria
+      - /storage/data:/config
     network_mode: "host"
     restart: unless-stopped
 

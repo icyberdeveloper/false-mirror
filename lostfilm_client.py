@@ -12,6 +12,8 @@ logger = logging.getLogger(__name__)
 
 def get_series(db, torrent_mirror, lostfilm_lf_session, series_names, proxies):
     series_list = []
+
+    logger.info('Start update {} shows'.format(len(series_names)))
     for series_name in series_names:
         logger.info('Search show - {}'.format(series_name))
         full_url = torrent_mirror + '/series/' + series_name + '/seasons/'
@@ -37,7 +39,7 @@ def get_series(db, torrent_mirror, lostfilm_lf_session, series_names, proxies):
             series = s.Series(torrent_url, series_id)
             series_list.append(series)
 
-        return utils.filter_torrents_if_exists(db, series_list)
+    return utils.filter_torrents_if_exists(db, series_list)
 
 
 def drop_seasons_id(series_ids):
