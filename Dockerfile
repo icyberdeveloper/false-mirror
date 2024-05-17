@@ -4,7 +4,7 @@ WORKDIR /app
 
 COPY requirements.txt ./
 
-RUN apt-get update && apt-get install shadowsocks-libev
+RUN apt-get update && apt-get install shadowsocks-libev -y
 
 RUN pip install -r requirements.txt
 
