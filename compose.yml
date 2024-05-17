@@ -3,6 +3,10 @@ services:
   transmission:
     image: lscr.io/linuxserver/transmission:latest
     container_name: transmission
+    environment:
+      - PUID=0
+      - PGID=0
+      - TZ=Etc/UTC
     volumes:
       - /mnt/video/lostfilm:/lostfilm
       - /mnt/video/anilibria:/anilibria
