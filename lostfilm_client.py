@@ -39,7 +39,8 @@ def get_series(db, transmission, lostfilm_download_dir, torrent_mirror, lostfilm
             series = s.Series(torrent_url, series_id)
 
             if not utils.is_series_exist(db, series):
-                transmission.send_to_transmission([series], lostfilm_download_dir)
+                download_path = lostfilm_download_dir + '/' + series_name
+                transmission.send_to_transmission([series], download_path)
                 db.insert({'name': series.name, 'url': series.torrent_url})
                 series_list.append(series)
 
