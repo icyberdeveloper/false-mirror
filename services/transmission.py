@@ -1,5 +1,5 @@
 import base64
-import network
+from services import network
 import logging
 import transmissionrpc
 from retry import retry
