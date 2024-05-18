@@ -3,10 +3,8 @@ import time
 import logging
 from tinydb import TinyDB
 
-import lostfilm_client
-from transmission import Transmission
-import anilibria_client
-
+from services.transmission import Transmission
+from clients import anilibria_client, lostfilm_client
 
 logger = logging.getLogger(__name__)
 log_format = f'%(asctime)s - [%(levelname)s] - %(name)s - (%(filename)s).%(funcName)s(%(lineno)d) - %(message)s'
@@ -41,6 +39,7 @@ def main():
         transmission_port = cfg['transmission']['port']
 
         anilibria_torrent_mirror = cfg['anilibria']['torrent_mirrors'][0]
+        anilibria_api_mirror = cfg['anilibria']['api_mirrors'][0]
         anilibria_series_names = cfg['anilibria']['series']
         anilibria_download_dir = cfg['anilibria']['path']
 
@@ -54,11 +53,12 @@ def main():
         try:
             transmission = Transmission(transmission_host, transmission_port)
 
-            #logger.info('Starting anilibria...')
-            #anilibria_series = anilibria_client.get_series(
-            #    db, transmission, anilibria_download_dir, anilibria_torrent_mirror, anilibria_series_names, proxies
-            #)
-            #logger.info('Complete anilibria, update ' + str(len(anilibria_series)) + ' series')
+            logger.info('Starting anilibria...')
+            anilibria_series = anilibria_client.get_series(
+                db, transmission, anilibria_download_dir, anilibria_torrent_mirror,
+                anilibria_api_mirror, anilibria_series_names, proxies
+            )
+            logger.info('Complete anilibria, update ' + str(len(anilibria_series)) + ' series')
 
             logger.info('Starting lostfilm...')
             lostfilm_series = lostfilm_client.get_series(

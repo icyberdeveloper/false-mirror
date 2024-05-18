@@ -15,7 +15,8 @@ transmission:
 anilibria:
   torrent_mirrors:
     - 'https://www.anilibria.tv'
-    - 'https://aaa.anilibria.sbs'
+  api_mirrors:
+    - 'https://api.anilibria.tv'
   series:
     - 'Поднятие уровня в одиночку'
     - 'Магическая битва'

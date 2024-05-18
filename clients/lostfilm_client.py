@@ -3,9 +3,8 @@ import logging
 import re
 
 import utils
-import series as s
-import network
-
+from domain import series as s
+from services import network
 
 logger = logging.getLogger(__name__)
 
