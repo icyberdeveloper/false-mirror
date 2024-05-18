@@ -10,13 +10,12 @@ logger = logging.getLogger(__name__)
 
 class Transmission:
     def __init__(self, host, port):
-        logger.info('Setup transmission...')
         self.transmission = transmissionrpc.Client(address=host, port=port)
         self.count = 0
 
     @retry(Exception, tries=10, delay=5, backoff=2, logger=logger)
     def send_to_transmission(self, filtered_series, download_dir, proxies):
-        mount_point = download_dir + '_' + str(self.count % 2)
+
 
         logger.info('Start processing {} series for {}'.format(len(filtered_series), mount_point))
 

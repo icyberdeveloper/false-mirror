@@ -51,6 +51,8 @@ def main():
         logger.info('Init db...')
         db = TinyDB(db_path)
         try:
+            logger.info('Setup transmission...')
+            time.sleep(20)
             transmission = Transmission(transmission_host, transmission_port)
 
             logger.info('Starting anilibria...')

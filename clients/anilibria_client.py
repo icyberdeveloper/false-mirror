@@ -24,6 +24,7 @@ def get_titles(torrent_mirror, anime_name, proxies):
 
 def get_series(db, transmission, anilibria_download_dir, torrent_mirror, api_mirror, anime_names, proxies):
     series_list = []
+    count = 0
 
     for anime_name in anime_names:
         logger.info('Search anime - {}'.format(anime_name))
@@ -49,8 +50,10 @@ def get_series(db, transmission, anilibria_download_dir, torrent_mirror, api_mir
 
             series = s.Series(torrent_url, name)
             if not utils.is_series_exist(db, series):
-                transmission.send_to_transmission([series], anilibria_download_dir, proxies)
+                mount_point = anilibria_download_dir + '_' + str(count % 2)
+                transmission.send_to_transmission([series], mount_point, proxies)
                 db.insert({'name': series.name, 'url': series.torrent_url})
                 series_list.append(series)
+                count = count + 1
 
     return series_list

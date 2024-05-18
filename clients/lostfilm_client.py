@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 def get_series(db, transmission, lostfilm_download_dir, torrent_mirror, lostfilm_lf_session, series_names, proxies):
     series_list = []
+    count = 0
 
     logger.info('Start update {} shows'.format(len(series_names)))
     for series_name in series_names:
@@ -38,10 +39,12 @@ def get_series(db, transmission, lostfilm_download_dir, torrent_mirror, lostfilm
             series = s.Series(torrent_url, series_id)
 
             if not utils.is_series_exist(db, series):
-                download_path = lostfilm_download_dir + '/' + series_name
+                mount_point = lostfilm_download_dir + '_' + str(count % 2)
+                download_path = mount_point + '/' + series_name
                 transmission.send_to_transmission([series], download_path, proxies)
                 db.insert({'name': series.name, 'url': series.torrent_url})
                 series_list.append(series)
+                count = count + 1
 
     return series_list
 
