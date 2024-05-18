@@ -1,5 +1,5 @@
 global:
-  interval: 60 # minutes
+  interval: 1 # minutes
   db_path: '/storage/db.json'
   proxy:
     enabled: true
