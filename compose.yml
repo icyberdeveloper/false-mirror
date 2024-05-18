@@ -8,10 +8,10 @@ services:
       - PGID=0
       - TZ=Etc/UTC
     volumes:
-      - /mnt/video/lostfilm:/lostfilm
-      - /mnt/video/anilibria:/anilibria
-      - /mnt/video2/lostfilm:/lostfilm
-      - /mnt/video2/anilibria:/anilibria
+      - /mnt/video/lostfilm:/lostfilm_1
+      - /mnt/video/anilibria:/anilibria_1
+      - /mnt/video2/lostfilm:/lostfilm_2
+      - /mnt/video2/anilibria:/anilibria_2
       - /storage/data:/config
     network_mode: "host"
     restart: unless-stopped
