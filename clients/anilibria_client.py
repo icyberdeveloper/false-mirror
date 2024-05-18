@@ -49,7 +49,7 @@ def get_series(db, transmission, anilibria_download_dir, torrent_mirror, api_mir
 
             series = s.Series(torrent_url, name)
             if not utils.is_series_exist(db, series):
-                transmission.send_to_transmission([series], anilibria_download_dir)
+                transmission.send_to_transmission([series], anilibria_download_dir, proxies)
                 db.insert({'name': series.name, 'url': series.torrent_url})
                 series_list.append(series)
 
