@@ -13,13 +13,10 @@ class Qbittorent:
         self.qb_client.login(username=username, password=password)
 
     @retry(Exception, tries=10, delay=5, backoff=2, logger=logger)
-    def send_to_qbittorent(self, filtered_series, download_dir, proxies):
-        logger.info('Start processing {} series for {}'.format(len(filtered_series), download_dir))
-
+    def send_to_qbittorent(self, filtered_series, proxies):
         for series in filtered_series:
             logger.info('Process torrent: {}'.format(series.torrent_url))
             torrent_bites = network.get(series.torrent_url, proxies=proxies)
 
-            res = self.qb_client.download_from_file(torrent_bites.content, savepath=download_dir)
+            res = self.qb_client.download_from_file(torrent_bites.content, save_path=series.download_dir)
             logger.info('Add new series: ' + series.name + ', with url: ' + series.torrent_url)
-

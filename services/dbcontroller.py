@@ -10,3 +10,6 @@ class DbController:
         series_entity = Query()
         res = self.core.search(series_entity.url == series.torrent_url)
         return len(res) != 0
+
+    def save_series(self, series):
+        self.core.insert({'name': series.name, 'url': series.torrent_url})

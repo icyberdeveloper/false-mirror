@@ -2,7 +2,7 @@ import yaml
 import time
 import logging
 
-from services.db_controller import DbController
+from services.dbcontroller import DbController
 from services.qbittorrent_s import Qbittorent
 from clients import anilibria_client, lostfilm_client
 

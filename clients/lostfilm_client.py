@@ -32,17 +32,16 @@ def get_series(db, qbittorent_client, download_dir, torrent_mirror, lostfilm_lf_
 
             redirect_url = get_redirect_url(torrent_mirror, series_id, lostfilm_lf_session, proxies)
             torrent_url = get_torrent_url(redirect_url, proxies)
+            season_str = get_season_number(series_id)
+            download_path = '{0}/{1} ({2})/Season {3}'.format(
+                download_dir, ru_name, release_year, season_str
+            )
 
-            series = s.Series(torrent_url, ru_name)
+            series = s.Series(torrent_url, download_path, ru_name, release_year, season_str)
 
             if not db.is_series_exist(series):
-                season_str = get_season_number(series_id)
-                download_path = '{0}/{1} ({2})/Season {3}'.format(
-                    download_dir, series_name, release_year, season_str
-                )
-
-                qbittorent_client.send_to_qbittorent([series], download_path, proxies)
-                db.core.insert({'name': series.name, 'url': series.torrent_url})
+                qbittorent_client.send_to_qbittorent([series], proxies)
+                db.save_series(series)
                 series_list.append(series)
 
     return series_list

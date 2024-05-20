@@ -75,17 +75,16 @@ def get_series(db, qbittorent_client, download_dir, torrent_mirror, api_mirror, 
             name = get_name(title)
             release_year = get_release_year(title)
             season_num = get_season_number(title)
+            download_path = '{0}/{1} ({2})/Season {3}'.format(
+                download_dir, name, release_year, season_num
+            )
 
             logger.info('Produce anime with title - {}'.format(name))
 
-            series = s.Series(torrent_url, name)
+            series = s.Series(torrent_url, download_path, name, release_year, season_num)
             if not db.is_series_exist(series):
-                download_path = '{0}/{1} ({2})/Season {3}'.format(
-                    download_dir, name, release_year, season_num
-                )
-
-                qbittorent_client.send_to_qbittorent([series], download_dir, proxies)
-                db.core.insert({'name': series.name, 'url': series.torrent_url})
+                qbittorent_client.send_to_qbittorent([series], proxies)
+                db.save_series(series)
                 series_list.append(series)
 
     return series_list
