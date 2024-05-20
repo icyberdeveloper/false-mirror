@@ -1,50 +1,49 @@
 from bs4 import BeautifulSoup
 import logging
 import re
+from datetime import datetime
 
-import utils
 from domain import series as s
 from services import network
 
 logger = logging.getLogger(__name__)
 
 
-def get_series(db, transmission, lostfilm_download_dir, torrent_mirror, lostfilm_lf_session, series_names, proxies):
+def get_series(db, qbittorent_client, download_dir, torrent_mirror, lostfilm_lf_session, series_names, proxies):
     series_list = []
-    count = 0
 
     logger.info('Start update {} shows'.format(len(series_names)))
     for series_name in series_names:
         logger.info('Search show - {}'.format(series_name))
-        full_url = torrent_mirror + '/series/' + series_name + '/seasons/'
-        res = network.get(full_url, proxies=proxies)
+        seasons_url = torrent_mirror + '/series/' + series_name + '/seasons/'
+        res = network.get(seasons_url, proxies=proxies)
 
         series_ids = re.findall(r"PlayEpisode\('(\d+)'\)", res.text)
         series_ids = drop_seasons_id(series_ids)
 
         logger.info('Found {} series with show name {}'.format(len(series_ids), series_name))
 
+        main_page_url = torrent_mirror + '/series/' + series_name
+        ru_name, release_date = get_original_name_and_release_date(main_page_url, proxies)
+        release_year = datetime.strptime(release_date, '%Y-%m-%d').date().year
+
         for series_id in series_ids:
             logger.info('Produce show with id - {}'.format(series_id))
-            torrent_page = torrent_mirror + '/v_search.php?a=' + series_id
-            cookies = {'lf_session': lostfilm_lf_session}
-            res = network.get(torrent_page, cookies=cookies, proxies=proxies)
-            soup = BeautifulSoup(res.text, "html.parser")
-            reddirect_url = soup.find('a').attrs['href']
 
-            res = network.get(reddirect_url, proxies=proxies)
-            soup = BeautifulSoup(res.text, "html.parser")
-            torrent_url = soup.find(tag_with_1080p_link).attrs['href']
+            redirect_url = get_redirect_url(torrent_mirror, series_id, lostfilm_lf_session, proxies)
+            torrent_url = get_torrent_url(redirect_url, proxies)
 
-            series = s.Series(torrent_url, series_id)
+            series = s.Series(torrent_url, ru_name)
 
-            if not utils.is_series_exist(db, series):
-                mount_point = lostfilm_download_dir + '_' + str(count % 2)
-                download_path = mount_point + '/' + series_name
-                transmission.send_to_transmission([series], download_path, proxies)
-                db.insert({'name': series.name, 'url': series.torrent_url})
+            if not db.is_series_exist(series):
+                season_str = get_season_number(series_id)
+                download_path = '{0}/{1} ({2})/Season {3}'.format(
+                    download_dir, series_name, release_year, season_str
+                )
+
+                qbittorent_client.send_to_qbittorent([series], download_path, proxies)
+                db.core.insert({'name': series.name, 'url': series.torrent_url})
                 series_list.append(series)
-                count = count + 1
 
     return series_list
 
@@ -61,3 +60,39 @@ def drop_seasons_id(series_ids):
 
 def tag_with_1080p_link(tag):
     return tag.name == 'a' and tag.has_attr('href') and '1080p' in tag.text
+
+
+def get_redirect_url(torrent_mirror, series_id, lostfilm_lf_session, proxies):
+    torrent_page = torrent_mirror + '/v_search.php?a=' + series_id
+    cookies = {'lf_session': lostfilm_lf_session}
+    res = network.get(torrent_page, cookies=cookies, proxies=proxies)
+    soup = BeautifulSoup(res.text, 'html.parser')
+    redirect_url = soup.find('a').attrs['href']
+
+    return redirect_url
+
+
+def get_torrent_url(redirect_url, proxies):
+    res = network.get(redirect_url, proxies=proxies)
+    soup = BeautifulSoup(res.text, 'html.parser')
+    torrent_url = soup.find(tag_with_1080p_link).attrs['href']
+
+    return torrent_url
+
+
+def get_original_name_and_release_date(main_page_url, proxies):
+    res = network.get(main_page_url, proxies=proxies)
+    soup = BeautifulSoup(res.text, 'html.parser')
+    ru_name = soup.find('h1', {'class': 'title-ru'}).text
+    release_date = soup.find('meta', {'itemprop': 'dateCreated'}).attrs['content']
+
+    return ru_name, release_date
+
+
+def get_season_number(id):
+    tmp = id[-6:]
+    season = tmp[:3]
+    if season.startswith('0'):
+        season = season[-2:]
+
+    return season

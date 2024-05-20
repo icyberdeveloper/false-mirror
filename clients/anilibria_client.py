@@ -1,6 +1,5 @@
 import logging
 from domain import series as s
-import utils
 from services import network
 
 logger = logging.getLogger(__name__)
@@ -22,9 +21,34 @@ def get_titles(torrent_mirror, anime_name, proxies):
     return res.json()['list']
 
 
-def get_series(db, transmission, anilibria_download_dir, torrent_mirror, api_mirror, anime_names, proxies):
+def is_franchise(title):
+    return len(title['franchises']) > 0
+
+
+def get_name(title):
+    if is_franchise(title):
+        return title['franchises'][0]['franchise']['name']
+
+    return title['names']['ru'] if title['names']['ru'] else title['names']['en']
+
+
+def get_release_year(title):
+    return title['season']['year'] if title['season']['year'] else 0
+
+
+def get_season_number(title):
+    if is_franchise(title):
+        code = title['code']
+        releases = title['franchises'][0]['releases']
+        for release in releases:
+            if release['code'] == code:
+                ordinal = release['ordinal']
+                return '0' + str(ordinal) if ordinal < 10 else str(ordinal)
+    return '01'
+
+
+def get_series(db, qbittorent_client, download_dir, torrent_mirror, api_mirror, anime_names, proxies):
     series_list = []
-    count = 0
 
     for anime_name in anime_names:
         logger.info('Search anime - {}'.format(anime_name))
@@ -32,28 +56,36 @@ def get_series(db, transmission, anilibria_download_dir, torrent_mirror, api_mir
 
         if titles is None or len(titles) == 0:
             logger.warning('Not found anilibria anime: ' + anime_name)
-            break
+            continue
 
         logger.info('Found {} anime with query {}'.format(len(titles), anime_name))
 
         for title in titles:
+            if title['type']['code'] != 1:  # only TV Shows
+                logger.warning('Skip not TV Show type for : ' + anime_name)
+                continue
+
             torrents = title['torrents']
             if torrents is None or len(torrents['list']) == 0:
                 logger.warning('Not found torrents for anime: ' + anime_name)
-                break
+                continue
 
             best_torrent = get_best_quality(torrents['list'])
             torrent_url = torrent_mirror + best_torrent['url']
-            name = title['names']['ru'] if title['names']['ru'] else title['names']['en']
+            name = get_name(title)
+            release_year = get_release_year(title)
+            season_num = get_season_number(title)
 
             logger.info('Produce anime with title - {}'.format(name))
 
             series = s.Series(torrent_url, name)
-            if not utils.is_series_exist(db, series):
-                mount_point = anilibria_download_dir + '_' + str(count % 2)
-                transmission.send_to_transmission([series], mount_point, proxies)
-                db.insert({'name': series.name, 'url': series.torrent_url})
+            if not db.is_series_exist(series):
+                download_path = '{0}/{1} ({2})/Season {3}'.format(
+                    download_dir, name, release_year, season_num
+                )
+
+                qbittorent_client.send_to_qbittorent([series], download_dir, proxies)
+                db.core.insert({'name': series.name, 'url': series.torrent_url})
                 series_list.append(series)
-                count = count + 1
 
     return series_list

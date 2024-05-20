@@ -1,18 +1,18 @@
 ---
 services:
-  transmission:
-    image: lscr.io/linuxserver/transmission:latest
-    container_name: transmission
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
     environment:
       - PUID=0
       - PGID=0
       - TZ=Etc/UTC
+      - WEBUI_PORT=8080
+      - TORRENTING_PORT=6882
     volumes:
-      - /mnt/video/lostfilm:/lostfilm_0
-      - /mnt/video/anilibria:/anilibria_0
-      - /mnt/video2/lostfilm:/lostfilm_1
-      - /mnt/video2/anilibria:/anilibria_1
-      - /storage/data:/config
+      - /storage/qbittorrent:/config
+      - /mnt/library:/downloads
+      - /mnt/tmp:/incomplete
     network_mode: "host"
     restart: unless-stopped
 
@@ -24,3 +24,6 @@ services:
       - /storage:/storage
     network_mode: "host"
     restart: unless-stopped
+    depends_on:
+      qbittorrent:
+        condition: service_started
