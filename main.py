@@ -13,6 +13,34 @@ log_format = f'%(asctime)s - [%(levelname)s] - %(name)s - (%(filename)s).%(funcN
 logging.basicConfig(level=logging.INFO, format=log_format)
 
 
+def process_anilibria_series(db, qbittorrent, download_dir, torrent_mirror, api_mirror, proxies):
+    try:
+        logger.info('Starting anilibria...')
+        anilibria_codes = db.get_anilibria_codes()
+        anilibria_series = anilibria_client.get_series(
+            db, qbittorrent, download_dir, torrent_mirror,
+            api_mirror, anilibria_codes, proxies
+        )
+        logger.info('Complete anilibria, update ' + str(len(anilibria_series)) + ' series')
+    except Exception as e:
+        logger.error('Unable to complete anilibria series: ' + str(e))
+        raise e
+
+
+def process_lostfilm_series(db, qbittorrent, download_dir, torrent_mirror, lf_session, proxies):
+    try:
+        logger.info('Starting lostfilm...')
+        lostfilm_codes = db.get_lostfilm_codes()
+        lostfilm_series = lostfilm_client.get_series(
+            db, qbittorrent, download_dir, torrent_mirror,
+            lf_session, lostfilm_codes, proxies
+        )
+        logger.info('Complete lostfilm, update ' + str(len(lostfilm_series)) + ' series')
+    except Exception as e:
+        logger.error('Unable to complete lostfilm series: ' + str(e))
+        raise e
+
+
 def main():
     logger.info('Reading config...')
     cfg = config.from_file(os.path.abspath('config.yaml'))
@@ -32,22 +60,14 @@ def main():
                 cfg.qbittorrent.username, cfg.qbittorrent.password
             )
 
-            anilibria_codes = db.get_anilibria_codes()
-            lostfilm_codes = db.get_lostfilm_codes()
-
-            logger.info('Starting anilibria...')
-            anilibria_series = anilibria_client.get_series(
+            process_anilibria_series(
                 db, qbittorrent, cfg.qbittorrent.download_dir, cfg.anilibria.torrent_mirror,
-                cfg.anilibria.api_mirror, anilibria_codes, cfg.base.proxy.as_dict
+                cfg.anilibria.api_mirror, cfg.base.proxy.as_dict
             )
-            logger.info('Complete anilibria, update ' + str(len(anilibria_series)) + ' series')
-
-            logger.info('Starting lostfilm...')
-            lostfilm_series = lostfilm_client.get_series(
+            process_lostfilm_series(
                 db, qbittorrent, cfg.qbittorrent.download_dir, cfg.lostfilm.torrent_mirror,
-                cfg.lostfilm.lf_session, lostfilm_codes, cfg.base.proxy.as_dict
+                cfg.lostfilm.lf_session, cfg.base.proxy.as_dict
             )
-            logger.info('Complete lostfilm, update ' + str(len(lostfilm_series)) + ' series')
 
             logger.info('Starting renamer...')
             renamer.rename()

@@ -15,10 +15,11 @@ class DbController:
 
     def save_series(self, series):
         self.qbittorrent.insert({
-            'id': series.id,
-            'url': series.torrent_url,
-            'download_path': series.download_path,
+            'external_id': series.external_id,
+            'code': series.code,
+            'torrent_url': series.torrent_url,
             'name': series.name,
+            'download_path': series.download_path,
             'release_year': series.release_year,
             'season_num': series.season_num
         })
