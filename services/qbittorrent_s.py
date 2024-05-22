@@ -18,5 +18,5 @@ class Qbittorent:
             logger.info('Process torrent: {}'.format(series.torrent_url))
             torrent_bites = network.get(series.torrent_url, proxies=proxies)
 
-            res = self.qb_client.download_from_file(torrent_bites.content, save_path=series.download_dir)
+            res = self.qb_client.download_from_file(torrent_bites.content, save_path=series.download_path)
             logger.info('Add new series: ' + series.name + ', with url: ' + series.torrent_url)
