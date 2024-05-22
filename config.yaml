@@ -1,6 +1,5 @@
 global:
   interval: 60 # minutes
-  db_path: '/storage/db.json'
   proxy:
     enabled: true
     host: '127.0.0.1'
@@ -13,6 +12,11 @@ qbittorrent:
   username: 'admin'
   password: 'adminadmin'
   download_dir: '/downloads/TV Shows'
+  db_path: '/storage/qbittorrent.json'
+
+
+nocronbot:
+  token: '6934685680:AAF1uNpBNVya6ljNFrxahUsli4ZezRstZYo'
 
 
 thetvdb:
@@ -24,82 +28,11 @@ anilibria:
     - 'https://www.anilibria.tv'
   api_mirrors:
     - 'https://api.anilibria.tv'
-  series:
-    - 'Ore dake Level Up na Ken'
-    - 'Jujutsu Kaisen'
-    # - 'Dororo'
-    # - 'Shingeki no Kyojin'
-    # - 'Death Note'
-    # - 'JoJo no Kimyou na Bouken'
-    # - 'Jigokuraku'
-    # - 'Tokyo Ghoul'
-    # - 'Ookami to Koushinryou'
+  db_path: '/storage/anilibria.json'
 
 
 lostfilm:
   lf_session: "5dd9ff9da1fdac450fd1bc10e77186d3.2214896"
   torrent_mirrors:
     - 'https://www.lostfilm.tv'
-  series:
-    - '9-1-1'
-    # - 'The_Rookie'
-    # - 'Shogun'
-    # - 'Fallout'
-    # - '3_Body_Problem'
-    # - 'Halo'
-    # - 'Reacher'
-    # - 'Berlin'
-    # - 'Billions'
-    # - 'Ahsoka'
-    # - 'Heels'
-    # - 'Foundation'
-    # - 'Warrior'
-    # - 'The_Witcher'
-    # - 'Silo'
-    # - 'Black_Mirror'
-    # - 'Sweet_Tooth'
-    # - 'The_Mandalorian'
-    # - 'Carnival_Row'
-    # - 'The_Last_of_Us'
-    # - '1923'
-    # - 'Vikings_Valhalla'
-    # - 'Leverage_Redemption'
-    # - 'Tulsa_King'
-    # - 'Yellowstone'
-    # - 'The_Witcher_Blood_Origin'
-    # - 'The_Lord_of_the_Rings_The_Rings_of_Power'
-    # - 'See'
-    # - 'Stranger_Things'
-    # - 'Obi_Wan_Kenobi'
-    # - 'Love_Death_and_Robots'
-    # - 'Killing_Eve'
-    # - 'The_Last_Kingdom'
-    # - 'Peaky_Blinders'
-    # - 'Snowpiercer'
-    # - 'Raised_by_Wolves'
-    # - '1883'
-    # - 'The_Book_of_Boba_Fett'
-    # - 'The_Expanse'
-    # - 'La_Casa_de_Papel'
-    # - 'Arcane'
-    # - 'Another_Life'
-    # - 'Squid_Game'
-    # - 'The_Outpost'
-    # - 'Lucifer'
-    # - 'The_Kominsky_Method'
-    # - 'Tribes_of_Europa'
-    # - 'Vikings'
-    # - 'The_100'
-    # - 'Project_Blue_Book'
-    # - 'Altered_Carbon'
-    # - 'Mr_Mercedes'
-    # - 'Preacher'
-    # - 'Wu_Assassins'
-    # - 'Jessica_Jones'
-    # - 'Game_of_Thrones'
-    # - 'Into_the_Badlands'
-    # - 'Lethal_Weapon'
-    # - 'The_Shannara_Chronicles'
-    # - 'Sherlock'
-    # - 'Constantine'
-    # - 'Mortal_Kombat_Legacy'
+  db_path: '/storage/lostfilm.json'
