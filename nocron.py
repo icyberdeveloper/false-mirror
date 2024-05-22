@@ -1,6 +1,7 @@
 import os
 import logging
 import asyncio
+import nest_asyncio
 
 from telegram import ForceReply, Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
@@ -95,4 +96,5 @@ if __name__ == '__main__':
 
     logger.info('Setup nocron bot...')
     bot = NocronBot(cfg.nocron.token, cfg.lostfilm.torrent_mirror, cfg.anilibria.torrent_mirror, db)
+    nest_asyncio.apply()
     asyncio.run(bot.run())
