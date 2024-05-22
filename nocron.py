@@ -1,5 +1,6 @@
 import os
 import logging
+import asyncio
 
 from telegram import ForceReply, Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
@@ -93,5 +94,5 @@ if __name__ == '__main__':
     db = DbController(cfg.qbittorrent.db_path, cfg.anilibria.db_path, cfg.lostfilm.db_path)
 
     logger.info('Setup nocron bot...')
-    bot = NocronBot(cfg.nocron_token, cfg.lostfilm_host, cfg.anilibria_host, db)
-    bot.run()
+    bot = NocronBot(cfg.nocron.token, cfg.lostfilm.torrent_mirror, cfg.anilibria.torrent_mirror, db)
+    asyncio.run(bot.run())

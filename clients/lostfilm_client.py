@@ -13,7 +13,8 @@ def get_series(db, qbittorent_client, download_dir, torrent_mirror, lostfilm_lf_
     series_list = []
 
     logger.info('Start update {} shows'.format(len(lostfilm_codes)))
-    for lostfilm_code in lostfilm_codes:
+    for lostfilm_code_item in lostfilm_codes:
+        lostfilm_code = lostfilm_code_item['code']
         logger.info('Search show - {}'.format(lostfilm_code))
         seasons_url = torrent_mirror + '/series/' + lostfilm_code + '/seasons/'
         res = network.get(seasons_url, proxies=proxies)

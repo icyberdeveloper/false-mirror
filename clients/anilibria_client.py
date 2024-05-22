@@ -56,7 +56,8 @@ def get_season_number(title):
 def get_series(db, qbittorent_client, download_dir, torrent_mirror, api_mirror, anilibria_codes, proxies):
     series_list = []
 
-    for anilibria_code in anilibria_codes:
+    for anilibria_code_item in anilibria_codes:
+        anilibria_code = anilibria_code_item['code']
         logger.info('GET anime - {}'.format(anilibria_code))
         title = get_title(api_mirror, anilibria_code, proxies)
 

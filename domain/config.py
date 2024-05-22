@@ -55,12 +55,10 @@ class Config:
 
         self.anilibria.torrent_mirror = cfg['anilibria']['torrent_mirrors'][0]
         self.anilibria.api_mirror = cfg['anilibria']['api_mirrors'][0]
-        self.anilibria.series_names = cfg['anilibria']['series']
         self.anilibria.db_path = cfg['anilibria']['db_path']
 
         self.lostfilm.torrent_mirror = cfg['lostfilm']['torrent_mirrors'][0]
         self.lostfilm.lf_session = cfg['lostfilm']['lf_session']
-        self.lostfilm.series_names = cfg['lostfilm']['series']
         self.lostfilm.db_path = cfg['lostfilm']['db_path']
 
 
