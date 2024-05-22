@@ -22,6 +22,11 @@ class Config:
     class nocron:
         token: str
 
+    class renamer:
+        root_dir: str
+        class anilibria:
+            regex: str
+
     class anilibria:
         torrent_mirror: str
         api_mirror: str
@@ -52,6 +57,9 @@ class Config:
         self.qbittorrent.db_path = cfg['qbittorrent']['db_path']
 
         self.nocron.token = cfg['nocronbot']['token']
+
+        self.renamer.root_dir = cfg['renamer']['root_dir']
+        self.renamer.anilibria.regex = cfg['renamer']['anilibria']['regex']
 
         self.anilibria.torrent_mirror = cfg['anilibria']['torrent_mirrors'][0]
         self.anilibria.api_mirror = cfg['anilibria']['api_mirrors'][0]

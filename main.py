@@ -4,6 +4,7 @@ import logging
 
 from services.dbcontroller import DbController
 from services.qbittorrent_s import Qbittorent
+from services.renamer import Renamer
 from clients import anilibria_client, lostfilm_client
 import domain.config as config
 
@@ -18,6 +19,9 @@ def main():
 
     logger.info('Init db...')
     db = DbController(cfg.qbittorrent.db_path, cfg.anilibria.db_path, cfg.lostfilm.db_path)
+
+    logger.info('Init renamer...')
+    renamer = Renamer(cfg.renamer.root_dir, cfg.renamer.anilibria.regex)
 
     while True:
         logger.info('Starting loop...')
@@ -44,6 +48,9 @@ def main():
                 cfg.lostfilm.lf_session, lostfilm_codes, cfg.base.proxy.as_dict
             )
             logger.info('Complete lostfilm, update ' + str(len(lostfilm_series)) + ' series')
+
+            logger.info('Starting renamer...')
+            renamer.rename()
 
         except Exception as e:
             logger.exception(e)

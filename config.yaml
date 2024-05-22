@@ -15,14 +15,6 @@ qbittorrent:
   db_path: '/storage/qbittorrent.json'
 
 
-nocronbot:
-  token: '6934685680:AAF1uNpBNVya6ljNFrxahUsli4ZezRstZYo'
-
-
-thetvdb:
-  api_key: '62ec625e-c313-4276-aebb-a847002a07fc'
-
-
 anilibria:
   torrent_mirrors:
     - 'https://www.anilibria.tv'
@@ -36,3 +28,16 @@ lostfilm:
   torrent_mirrors:
     - 'https://www.lostfilm.tv'
   db_path: '/storage/lostfilm.json'
+
+
+renamer:
+  root_dir: '/mnt/library'
+  anilibria:
+    regex: '(?P<name>\w+)_\[(?P<episode>\d{2})]_\[\w+]_\[\w+]\.mkv'
+
+
+nocronbot:
+  token: '6934685680:AAF1uNpBNVya6ljNFrxahUsli4ZezRstZYo'
+
+thetvdb:
+  api_key: '62ec625e-c313-4276-aebb-a847002a07fc'

@@ -9,8 +9,11 @@ from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, Messa
 import domain.config as config
 from services.dbcontroller import DbController
 
-logging.getLogger("httpx").setLevel(logging.WARNING)
+
 logger = logging.getLogger(__name__)
+log_format = f'%(asctime)s - [%(levelname)s] - %(name)s - (%(filename)s).%(funcName)s(%(lineno)d) - %(message)s'
+logging.basicConfig(level=logging.INFO, format=log_format)
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 
 class NocronBot:
