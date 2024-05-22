@@ -9,21 +9,21 @@ from services import network
 logger = logging.getLogger(__name__)
 
 
-def get_series(db, qbittorent_client, download_dir, torrent_mirror, lostfilm_lf_session, series_names, proxies):
+def get_series(db, qbittorent_client, download_dir, torrent_mirror, lostfilm_lf_session, lostfilm_codes, proxies):
     series_list = []
 
-    logger.info('Start update {} shows'.format(len(series_names)))
-    for series_name in series_names:
-        logger.info('Search show - {}'.format(series_name))
-        seasons_url = torrent_mirror + '/series/' + series_name + '/seasons/'
+    logger.info('Start update {} shows'.format(len(lostfilm_codes)))
+    for lostfilm_code in lostfilm_codes:
+        logger.info('Search show - {}'.format(lostfilm_code))
+        seasons_url = torrent_mirror + '/series/' + lostfilm_code + '/seasons/'
         res = network.get(seasons_url, proxies=proxies)
 
         series_ids = re.findall(r"PlayEpisode\('(\d+)'\)", res.text)
         series_ids = drop_seasons_id(series_ids)
 
-        logger.info('Found {} series with show name {}'.format(len(series_ids), series_name))
+        logger.info('Found {} series with show name {}'.format(len(series_ids), lostfilm_code))
 
-        main_page_url = torrent_mirror + '/series/' + series_name
+        main_page_url = torrent_mirror + '/series/' + lostfilm_code
         ru_name, release_date = get_original_name_and_release_date(main_page_url, proxies)
         release_year = datetime.strptime(release_date, '%Y-%m-%d').date().year
 
@@ -37,7 +37,7 @@ def get_series(db, qbittorent_client, download_dir, torrent_mirror, lostfilm_lf_
                 download_dir, ru_name, release_year, season_str
             )
 
-            series = s.Series(series_id, series_name, torrent_url, download_path, ru_name, release_year, season_str)
+            series = s.Series(series_id, lostfilm_code, torrent_url, download_path, ru_name, release_year, season_str)
 
             if not db.is_series_exist(series):
                 qbittorent_client.send_to_qbittorent([series], proxies)

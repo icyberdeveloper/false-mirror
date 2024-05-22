@@ -27,3 +27,15 @@ services:
     depends_on:
       qbittorrent:
         condition: service_started
+
+  nocron:
+    platform: linux/x86_64
+    image: icyberdeveloper/nocron:latest
+    container_name: nocron
+    volumes:
+      - /storage:/storage
+    network_mode: "host"
+    restart: unless-stopped
+    depends_on:
+      false-mirror:
+        condition: service_started

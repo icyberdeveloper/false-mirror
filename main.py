@@ -28,17 +28,20 @@ def main():
                 cfg.qbittorrent.username, cfg.qbittorrent.password
             )
 
+            anilibria_codes = db.get_anilibria_codes()
+            lostfilm_codes = db.get_lostfilm_codes()
+
             logger.info('Starting anilibria...')
             anilibria_series = anilibria_client.get_series(
                 db, qbittorrent, cfg.qbittorrent.download_dir, cfg.anilibria.torrent_mirror,
-                cfg.anilibria.api_mirror, cfg.anilibria.series_names, cfg.base.proxy.as_dict
+                cfg.anilibria.api_mirror, anilibria_codes, cfg.base.proxy.as_dict
             )
             logger.info('Complete anilibria, update ' + str(len(anilibria_series)) + ' series')
 
             logger.info('Starting lostfilm...')
             lostfilm_series = lostfilm_client.get_series(
                 db, qbittorrent, cfg.qbittorrent.download_dir, cfg.lostfilm.torrent_mirror,
-                cfg.lostfilm.lf_session, cfg.lostfilm.series_names, cfg.base.proxy.as_dict
+                cfg.lostfilm.lf_session, lostfilm_codes, cfg.base.proxy.as_dict
             )
             logger.info('Complete lostfilm, update ' + str(len(lostfilm_series)) + ' series')
 
