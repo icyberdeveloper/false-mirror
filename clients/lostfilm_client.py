@@ -37,7 +37,7 @@ def get_series(db, qbittorent_client, download_dir, torrent_mirror, lostfilm_lf_
                 download_dir, ru_name, release_year, season_str
             )
 
-            series = s.Series(series_id, torrent_url, download_path, ru_name, release_year, season_str)
+            series = s.Series(series_id, series_name, torrent_url, download_path, ru_name, release_year, season_str)
 
             if not db.is_series_exist(series):
                 qbittorent_client.send_to_qbittorent([series], proxies)
