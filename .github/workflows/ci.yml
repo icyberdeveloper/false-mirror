@@ -29,5 +29,5 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           push: true
-          file: ${{ inputs.context }}/Dockerfile-nocron
-          tags: icyberdeveloper/false-mirror:latest
+          file: Dockerfile-nocron
+          tags: icyberdeveloper/nocron:latest
