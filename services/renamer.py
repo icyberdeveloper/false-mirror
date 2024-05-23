@@ -39,10 +39,12 @@ class Renamer:
         episode = match_result.group('episode')
         season = 1
 
-        season_match = re.match('.*(S(?P<season>[0-9]{1}))$', name)
+        season_match = re.match('(?P<name>.*)(S(?P<season>[0-9]{1}))$', name)
         if season_match:
             season = int(season_match.group('season'))
+            name = season_match.group('name')
 
         season = '0' + str(season) if season < 10 else str(season)
+        name = name.replace('_', ' ')
 
         return name, season, episode
