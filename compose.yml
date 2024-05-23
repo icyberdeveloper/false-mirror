@@ -22,6 +22,7 @@ services:
     container_name: false-mirror
     volumes:
       - /storage:/storage
+      - /mnt/library:/library
     network_mode: "host"
     restart: unless-stopped
     depends_on:

@@ -31,7 +31,7 @@ lostfilm:
 
 
 renamer:
-  root_dir: '/mnt/library'
+  root_dir: '/library'
   anilibria:
     regex: '(?P<name>\w+)_\[(?P<episode>\d{2})]_\[\w+]_\[\w+]\.mkv'
 
