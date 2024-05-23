@@ -10,7 +10,7 @@ class DbController:
 
     def is_series_exist(self, series):
         series_entity = Query()
-        res = self.qbittorrent.search(series_entity.url == series.torrent_url)
+        res = self.qbittorrent.search(series_entity.torrent_url == series.torrent_url)
         return len(res) != 0
 
     def save_series(self, series):
