@@ -12,8 +12,11 @@ class Renamer:
         self.anilibria_regex = anilibria_regex
 
     def rename(self):
+        logger.info('Start walking from: ' + self.dir)
         for address, dirs, files in os.walk(self.dir):
+            logger.info('Look inside folder: ' + address)
             for filename in files:
+                logger.info('Found file: ' + address)
                 match_result = re.match(self.anilibria_regex, filename)
                 if match_result:
                     abs_path = os.path.join(address, filename)
