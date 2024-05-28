@@ -62,6 +62,10 @@ def tag_with_1080p_link(tag):
     return tag.name == 'a' and tag.has_attr('href') and '1080p' in tag.text
 
 
+def tag_with_720p_link(tag):
+    return tag.name == 'a' and tag.has_attr('href') and '720p' in tag.text
+
+
 def get_redirect_url(torrent_mirror, series_id, lostfilm_lf_session, proxies):
     torrent_page = torrent_mirror + '/v_search.php?a=' + series_id
     cookies = {'lf_session': lostfilm_lf_session}
@@ -75,7 +79,10 @@ def get_redirect_url(torrent_mirror, series_id, lostfilm_lf_session, proxies):
 def get_torrent_url(redirect_url, proxies):
     res = network.get(redirect_url, proxies=proxies)
     soup = BeautifulSoup(res.text, 'html.parser')
-    torrent_url = soup.find(tag_with_1080p_link).attrs['href']
+    item = soup.find(tag_with_1080p_link)
+    if item is None:
+        item = soup.find(tag_with_720p_link)
+    torrent_url = item.attrs['href']
 
     return torrent_url
 
