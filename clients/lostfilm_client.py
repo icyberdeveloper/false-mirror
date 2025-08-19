@@ -75,7 +75,7 @@ def get_redirect_url(torrent_mirror, series_id, lostfilm_lf_session, proxies):
     cookies = {'lf_session': lostfilm_lf_session}
     res = network.get(torrent_page, cookies=cookies, proxies=proxies)
     soup = BeautifulSoup(res.text, 'html.parser')
-    redirect_url = soup.find('a').attrs['href']
+    redirect_url = soup.find('meta').attrs['content'][7:]
 
     return redirect_url
 
