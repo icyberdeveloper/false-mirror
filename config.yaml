@@ -24,7 +24,7 @@ anilibria:
 
 
 lostfilm:
-  lf_session: "5dd9ff9da1fdac450fd1bc10e77186d3.2214896"
+  lf_session: "9277a695061f92112a9671814ecf230b.2214896"
   torrent_mirrors:
     - 'https://www.lostfilm.tv'
   db_path: '/storage/lostfilm.json'
