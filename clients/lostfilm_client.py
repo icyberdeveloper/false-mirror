@@ -74,6 +74,10 @@ def tag_with_WEBDLRip_link(tag):
     return tag.name == 'a' and tag.has_attr('href') and 'WEB-DLRip' in tag.text
 
 
+def tag_with_DVDRip_link(tag):
+    return tag.name == 'a' and tag.has_attr('href') and 'DVD-Rip' in tag.text
+
+
 def get_redirect_url(torrent_mirror, series_id, lostfilm_lf_session, proxies):
     torrent_page = torrent_mirror + '/v_search.php?a=' + series_id
     cookies = {'lf_session': lostfilm_lf_session}
@@ -94,6 +98,10 @@ def get_torrent_url(redirect_url, proxies):
             item = soup.find(tag_with_HDTVRip_link)
             if item is None:
                 item = soup.find(tag_with_WEBDLRip_link)
+                if item is None:
+                    item = soup.find(tag_with_DVDRip_link)
+                    if item is None:
+                        item = soup.find('div', {'class': 'inner-box--link main'}).find('a')
     torrent_url = item.attrs['href']
 
     return torrent_url
