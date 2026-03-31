@@ -76,11 +76,12 @@ Three containers, all `network_mode: host`:
 
 ```bash
 cd /app/false-mirror/deploy
-docker-compose up -d        # Start all
-docker-compose stop         # Stop all
-docker-compose logs -f      # Follow logs
+docker-compose up -d              # Start all (pulls from Docker Hub)
+docker-compose pull && docker-compose up -d  # Update to latest images
+docker-compose up -d --build      # Build locally and start (for development)
+docker-compose stop               # Stop all
+docker-compose logs -f            # Follow logs
 docker-compose restart false-mirror  # Restart after config change
-docker-compose build && docker-compose up -d  # Rebuild after code change
 ```
 
 Note: uses docker-compose v1 (`docker-compose`, not `docker compose`).
@@ -121,8 +122,9 @@ false-mirror/
 
 ```bash
 cd /app/false-mirror/deploy
-docker-compose up -d              # Start all
-docker-compose build && docker-compose up -d  # Rebuild after code change
+docker-compose up -d              # Start from Docker Hub images
+docker-compose up -d --build      # Build locally (development)
+docker-compose pull && docker-compose up -d  # Update to latest from registry
 ```
 
 Env vars set in deploy/compose.yml: `LF_SESSION`, `TG_BOT_TOKEN`, `HEALTHCHECK_TG_CHAT_ID`. Optional: `QB_USERNAME`, `QB_PASSWORD`.
@@ -131,7 +133,7 @@ No test suite or linter is configured.
 
 ### CI
 
-GitHub Actions on push to main: builds two Docker images (`false-mirror` and `nocron`) and pushes to Docker Hub via Buildx.
+GitHub Actions on push to main: builds two Docker images (`icyberdeveloper/false-mirror`, `icyberdeveloper/nocron`) and pushes to Docker Hub via Buildx. compose.yml has both `image:` (for pulling from registry) and `build:` (for local development).
 
 ### Architecture
 

@@ -16,6 +16,7 @@ services:
     restart: unless-stopped
 
   false-mirror:
+    image: icyberdeveloper/false-mirror:latest
     build:
       context: ..
       dockerfile: deploy/Dockerfile
@@ -35,6 +36,7 @@ services:
         condition: service_started
 
   bot:
+    image: icyberdeveloper/nocron:latest
     build:
       context: ..
       dockerfile: deploy/Dockerfile.bot
