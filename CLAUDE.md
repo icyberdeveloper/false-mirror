@@ -145,7 +145,7 @@ compose.yml has both `image:` (pull from registry) and `build:` (local developme
 Event-driven + periodic. Two triggers, isolated per-series processing:
 
 - **`app/scheduler.py`** — Each tracked show gets a random time slot within a 1-hour cycle (uniform distribution). Renamer + tracker run separately every 15 min.
-- **`app/bot.py`** — Telegram bot. `/download <url>` saves show to DB and **immediately** triggers a check for that show in a background thread. `/list` shows tracked series.
+- **`app/bot.py`** — Telegram bot. `/download <url>` saves show to DB and **immediately** triggers a check for that show in a background thread. Also supports LostFilm movies (`/movies/` URLs) — fire-and-forget download, no DB/scheduler. `/list` shows tracked series.
 - **`app/worker.py`** — Core logic: `check_lostfilm_show(code)`, `check_anilibria_show(code)`. Each show in its own try/except. Used by both scheduler and bot.
 
 **Duplicate prevention** — three layers: database check → filesystem scan → qBittorrent queue check.

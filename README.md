@@ -34,7 +34,10 @@ docker-compose up -d
 
 ## Telegram Bot Commands
 
-- `/download <url>` - Add a show. Accepts any `lostfilm.*/series/...` or `anilibria.*/release/...` URL
+- `/download <url>` - Add a show or movie. Accepts:
+  - `lostfilm.*/series/...` — TV series (tracked, periodic checks)
+  - `lostfilm.*/movies/...` — movies (fire-and-forget, downloads immediately)
+  - `anilibria.*/release/...` — anime series (tracked, periodic checks)
 - `/list` - Show all tracked series
 - `/start` - Help
 
