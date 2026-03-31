@@ -10,7 +10,7 @@ from services import network
 logger = logging.getLogger(__name__)
 
 
-def get_series(library, qbittorrent, download_dir, torrent_mirror, lf_session, codes, proxies, tracker=None, mobile_dir=None):
+def get_series(library, qbittorrent, download_dir, torrent_mirror, lf_session, codes, proxies, tracker=None):
     added = []
     logger.info(f'LostFilm: processing {len(codes)} shows')
 
@@ -56,18 +56,11 @@ def get_series(library, qbittorrent, download_dir, torrent_mirror, lf_session, c
                     added.append(label)
                     logger.info(f'LostFilm: queued {ru_name} S{season_str}E{episode_str}')
 
-                    # SD version for Telegram (lowest quality)
-                    if mobile_dir:
-                        sd_url = _pick_lowest_quality(links)
-                        if sd_url and sd_url != torrent_url:
-                            sd_path = f'{mobile_dir}/{ru_name} ({release_year})/Season {season_str}'
-                            qbittorrent.download_torrent(sd_url, sd_path, proxies)
-                            logger.info(f'LostFilm: queued SD {ru_name} S{season_str}E{episode_str}')
-                        elif sd_url:
-                            # Only one quality available — download it for mobile too
-                            sd_path = f'{mobile_dir}/{ru_name} ({release_year})/Season {season_str}'
-                            qbittorrent.download_torrent(sd_url, sd_path, proxies)
-                            logger.info(f'LostFilm: queued SD (same quality) {ru_name} S{season_str}E{episode_str}')
+                    # SD version for Telegram (lowest quality, same folder)
+                    sd_url = _pick_lowest_quality(links)
+                    if sd_url and sd_url != torrent_url:
+                        qbittorrent.download_torrent(sd_url, download_path, proxies)
+                        logger.info(f'LostFilm: queued SD {ru_name} S{season_str}E{episode_str}')
 
                 except Exception as e:
                     logger.error(f'LostFilm: error processing {code} S{season_str}E{episode_str}: {e}')

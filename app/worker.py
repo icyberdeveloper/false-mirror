@@ -45,7 +45,6 @@ def check_lostfilm_show(code):
             library, qbt, cfg.qbittorrent.download_dir,
             cfg.lostfilm.torrent_mirror, cfg.lostfilm.lf_session,
             codes, cfg.proxy.as_dict, tracker=tracker,
-            mobile_dir=cfg.qbittorrent.mobile_dir,
         )
         logger.info(f'LostFilm [{code}]: added {len(added)} episodes')
         return added

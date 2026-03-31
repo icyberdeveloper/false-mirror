@@ -17,11 +17,11 @@ logging.basicConfig(level=logging.INFO, format=log_format)
 logging.getLogger('httpx').setLevel(logging.WARNING)
 
 LIBRARY_ROOT = '/library'
-MOBILE_ROOT = '/library/TV Shows SD'
 VIDEO_EXTENSIONS = {'.mkv', '.avi', '.mp4', '.ts', '.m4v'}
 BROWSE_ROOTS = {
-    'Сериалы': '/library/TV Shows SD',
+    'Сериалы': '/library/TV Shows',
     'Фильмы': '/library/Movies',
+    'Аниме': '/library/Anime',
 }
 MAX_FILE_SIZE = 2 * 1024 * 1024 * 1024  # 2GB
 
