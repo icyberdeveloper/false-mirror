@@ -4,15 +4,14 @@ Safe to call from bot (immediate) or scheduler (periodic).
 """
 import logging
 
+import os
+
 from domain.config import from_file
 from services.database import Database
 from services.library import Library
 from services.qbittorrent import QBittorrent
 from services.tracker import Tracker
-from services.renamer import Renamer
 from clients import anilibria, lostfilm
-
-import os
 
 logger = logging.getLogger(__name__)
 
@@ -69,52 +68,3 @@ def check_anilibria_show(code):
     except Exception as e:
         logger.error(f'Anilibria [{code}]: failed: {e}')
         return []
-
-
-def check_all():
-    """Check all tracked shows. Each show is isolated — one failure doesn't affect others."""
-    cfg, db, library, tracker, qbt = _load_env()
-    proxies = cfg.proxy.as_dict
-    total_added = []
-
-    # LostFilm — each show independently
-    for item in db.get_lostfilm_codes():
-        code = item['code']
-        try:
-            added = lostfilm.get_series(
-                library, qbt, cfg.qbittorrent.download_dir,
-                cfg.lostfilm.torrent_mirror, cfg.lostfilm.lf_session,
-                [item], proxies, tracker=tracker,
-            )
-            total_added.extend(added)
-        except Exception as e:
-            logger.error(f'LostFilm [{code}]: failed: {e}')
-
-    # Anilibria — each show independently
-    for item in db.get_anilibria_codes():
-        code = item['code']
-        try:
-            added = anilibria.get_series(
-                library, qbt, cfg.qbittorrent.download_dir,
-                cfg.anilibria.torrent_mirror, cfg.anilibria.api_mirror,
-                [item], proxies, tracker=tracker,
-            )
-            total_added.extend(added)
-        except Exception as e:
-            logger.error(f'Anilibria [{code}]: failed: {e}')
-
-    # Renamer
-    try:
-        renamer = Renamer(cfg.renamer.root_dir, cfg.renamer.anilibria_regex)
-        renamer.rename()
-    except Exception as e:
-        logger.error(f'Renamer failed: {e}')
-
-    # Tracker verification
-    try:
-        tracker.check(qbt.client, cfg.renamer.root_dir + '/TV Shows')
-    except Exception as e:
-        logger.error(f'Tracker failed: {e}')
-
-    logger.info(f'Cycle complete: added {len(total_added)} total')
-    return total_added

@@ -17,9 +17,7 @@ logging.getLogger('httpx').setLevel(logging.WARNING)
 
 
 class Bot:
-    def __init__(self, token, lostfilm_host, anilibria_host, db):
-        self.lostfilm_host = lostfilm_host
-        self.anilibria_host = anilibria_host
+    def __init__(self, token, db):
         self.db = db
         self.app = ApplicationBuilder().token(token).build()
         self.app.add_handler(CommandHandler('start', self.cmd_start))
@@ -120,26 +118,11 @@ class Bot:
         except Exception as e:
             logger.error(f'Failed to send check result: {e}')
 
-    @staticmethod
-    def _extract_between(s, start_str, end_str):
-        try:
-            start = s.index(start_str) + len(start_str)
-            end = s.index(end_str, start)
-            return s[start:end]
-        except ValueError:
-            return ''
-
-
 def main():
     cfg = from_file(os.path.abspath('config.yaml'))
     db = Database(cfg.anilibria.db_path, cfg.lostfilm.db_path)
 
-    bot = Bot(
-        token=cfg.nocron.token,
-        lostfilm_host=cfg.lostfilm.torrent_mirror,
-        anilibria_host=cfg.anilibria.torrent_mirror,
-        db=db,
-    )
+    bot = Bot(token=cfg.nocron.token, db=db)
     bot.run()
 
 

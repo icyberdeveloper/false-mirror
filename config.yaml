@@ -1,5 +1,4 @@
 global:
-  interval: 60  # minutes
   proxy:
     enabled: false
     host: '127.0.0.1'
@@ -14,16 +13,13 @@ qbittorrent:
   incomplete_dir: '/incomplete'
 
 anilibria:
-  torrent_mirrors:
-    - 'https://www.anilibria.tv'
-  api_mirrors:
-    - 'https://api.anilibria.tv'
+  torrent_mirror: 'https://www.anilibria.tv'
+  api_mirror: 'https://api.anilibria.tv'
   db_path: '/storage/anilibria.json'
 
 lostfilm:
   lf_session: ''  # set via LF_SESSION env var
-  torrent_mirrors:
-    - 'https://www.lostfilm.tv'
+  torrent_mirror: 'https://www.lostfilm.tv'
   db_path: '/storage/lostfilm.json'
 
 renamer:

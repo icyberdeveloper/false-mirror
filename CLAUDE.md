@@ -111,7 +111,7 @@ Event-driven + periodic. Two triggers, isolated per-series processing:
 **Entry points:**
 - **`scheduler.py`** — Each tracked show gets a random time slot within a 1-hour cycle (uniform distribution). Renamer + tracker run separately every 15 min. No "thundering herd" — checks are spread evenly across time.
 - **`bot.py`** — Telegram bot. `/download <url>` saves show to DB and **immediately** triggers a check for that show in a background thread. `/list` shows tracked series. Result sent back to Telegram.
-- **`worker.py`** — Core logic. Isolated functions: `check_lostfilm_show(code)`, `check_anilibria_show(code)`, `check_all()`. Each show wrapped in its own try/except — one failure doesn't affect others. Used by both scheduler and bot.
+- **`worker.py`** — Core logic. Isolated functions: `check_lostfilm_show(code)`, `check_anilibria_show(code)`. Each show wrapped in its own try/except — one failure doesn't affect others. Used by both scheduler and bot.
 
 **Providers** (`clients/`):
 - `anilibria.py` — REST API client. Selects best quality torrent (prefers non-HEVC), extracts metadata from franchise data.
@@ -129,7 +129,7 @@ Event-driven + periodic. Two triggers, isolated per-series processing:
 
 **Duplicate prevention** — three layers: database check → filesystem scan → qBittorrent queue check.
 
-**`main.py`** — legacy entry point, replaced by `scheduler.py`.
+**Configuration** uses scalar `torrent_mirror`/`api_mirror` fields (not arrays).
 
 ## amneziawg-go (`/root/amneziawg-go/`)
 

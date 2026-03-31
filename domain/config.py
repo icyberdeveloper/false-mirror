@@ -27,15 +27,15 @@ class QbittorrentConfig:
 
 class AnilibriaConfig:
     def __init__(self, cfg):
-        self.torrent_mirror = cfg.get('torrent_mirrors', ['https://www.anilibria.tv'])[0]
-        self.api_mirror = cfg.get('api_mirrors', ['https://api.anilibria.tv'])[0]
+        self.torrent_mirror = cfg.get('torrent_mirror', 'https://www.anilibria.tv')
+        self.api_mirror = cfg.get('api_mirror', 'https://api.anilibria.tv')
         self.db_path = cfg.get('db_path', '/storage/anilibria.json')
 
 
 class LostfilmConfig:
     def __init__(self, cfg):
         self.lf_session = os.environ.get('LF_SESSION', cfg.get('lf_session', ''))
-        self.torrent_mirror = cfg.get('torrent_mirrors', ['https://www.lostfilm.tv'])[0]
+        self.torrent_mirror = cfg.get('torrent_mirror', 'https://www.lostfilm.tv')
         self.db_path = cfg.get('db_path', '/storage/lostfilm.json')
 
 
@@ -54,7 +54,6 @@ class NocronConfig:
 class Config:
     def __init__(self, cfg):
         global_cfg = cfg.get('global', {})
-        self.sleep_interval = global_cfg.get('interval', 60)
         self.proxy = ProxyConfig(global_cfg.get('proxy', {}))
         self.qbittorrent = QbittorrentConfig(cfg.get('qbittorrent', {}))
         self.anilibria = AnilibriaConfig(cfg.get('anilibria', {}))
