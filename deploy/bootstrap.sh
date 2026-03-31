@@ -26,7 +26,7 @@ fi
 # ============================================
 # 1. System packages
 # ============================================
-echo "[1/8] Installing packages..."
+echo "[1/6] Installing packages..."
 apt update
 apt install -y \
     docker.io docker-compose \
@@ -37,7 +37,7 @@ apt install -y \
 # ============================================
 # 2. AmneziaWG VPN
 # ============================================
-echo "[2/8] Installing AmneziaWG..."
+echo "[2/6] Installing AmneziaWG..."
 apt install -y amneziawg amneziawg-tools 2>/dev/null || {
     echo "Adding AmneziaWG repo..."
     add-apt-repository -y ppa:amnezia/ppa 2>/dev/null || {
@@ -70,50 +70,9 @@ if [ -n "$LOCAL_GW" ] && [ -n "$LOCAL_IF" ]; then
 fi
 
 # ============================================
-# 3. Nebula (mesh VPN)
+# 3. NFS Autofs
 # ============================================
-echo "[3/8] Restoring Nebula..."
-if [ -d "$BACKUP_DIR/nebula" ]; then
-    mkdir -p /etc/nebula
-    cp -a "$BACKUP_DIR/nebula/." /etc/nebula/
-    # Install nebula if not present
-    if ! command -v nebula &>/dev/null; then
-        NEBULA_VER="1.9.5"
-        wget -qO /tmp/nebula.tar.gz "https://github.com/slackhq/nebula/releases/download/v${NEBULA_VER}/nebula-linux-amd64.tar.gz"
-        tar -xzf /tmp/nebula.tar.gz -C /usr/local/bin/ nebula nebula-cert
-        rm /tmp/nebula.tar.gz
-    fi
-    systemctl enable nebula 2>/dev/null || true
-    systemctl start nebula 2>/dev/null || true
-fi
-
-# ============================================
-# 4. ZeroTier
-# ============================================
-echo "[4/8] Restoring ZeroTier..."
-if [ -f "$BACKUP_DIR/zerotier-identity.secret" ]; then
-    curl -s https://install.zerotier.com | bash || apt install -y zerotier-one
-    systemctl stop zerotier-one 2>/dev/null || true
-    cp "$BACKUP_DIR/zerotier-identity.public" /var/lib/zerotier-one/identity.public
-    cp "$BACKUP_DIR/zerotier-identity.secret" /var/lib/zerotier-one/identity.secret
-    systemctl enable --now zerotier-one
-    # Rejoin networks from backup
-    if [ -f "$BACKUP_DIR/zerotier-networks.json" ]; then
-        python3 -c "
-import json
-with open('$BACKUP_DIR/zerotier-networks.json') as f:
-    for net in json.load(f):
-        print(net.get('nwid',''))
-" | while read nwid; do
-            [ -n "$nwid" ] && zerotier-cli join "$nwid" 2>/dev/null || true
-        done
-    fi
-fi
-
-# ============================================
-# 5. NFS Autofs
-# ============================================
-echo "[5/8] Configuring autofs..."
+echo "[3/6] Configuring autofs..."
 mkdir -p /mnt /etc/auto.master.d
 cp "$BACKUP_DIR/system/mnt.autofs" /etc/auto.master.d/
 cp "$BACKUP_DIR/system/auto.mnt" /etc/auto.mnt 2>/dev/null || \
@@ -140,14 +99,14 @@ ls /mnt/library >/dev/null 2>&1 && echo "NAS mount OK" || echo "WARNING: NAS mou
 # ============================================
 # 6. Restore storage data
 # ============================================
-echo "[6/8] Restoring storage..."
+echo "[4/6] Restoring storage..."
 mkdir -p /storage
 cp -a "$BACKUP_DIR/storage/." /storage/
 
 # ============================================
 # 7. Healthcheck
 # ============================================
-echo "[7/8] Setting up healthcheck..."
+echo "[5/6] Setting up healthcheck..."
 cp "$BACKUP_DIR/system/healthcheck.sh" /usr/local/bin/healthcheck.sh
 chmod +x /usr/local/bin/healthcheck.sh
 cp "$BACKUP_DIR/system/healthcheck.service" /etc/systemd/system/
@@ -158,7 +117,7 @@ systemctl enable --now healthcheck.timer
 # ============================================
 # 8. false-mirror (Docker)
 # ============================================
-echo "[8/8] Starting false-mirror..."
+echo "[6/6] Starting false-mirror..."
 
 # Restore compose.yml with secrets
 cp "$BACKUP_DIR/compose.yml" /app/false-mirror/deploy/compose.yml

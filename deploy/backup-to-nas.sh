@@ -11,14 +11,6 @@ echo "[backup] Starting backup to NAS..."
 # VPN config (contains private keys)
 cp /etc/amnezia/amneziawg/awg0.conf "$BACKUP_DIR/awg0.conf"
 
-# Nebula config + certs
-cp -a /etc/nebula "$BACKUP_DIR/nebula"
-
-# ZeroTier identity
-cp -a /var/lib/zerotier-one/identity.public "$BACKUP_DIR/zerotier-identity.public" 2>/dev/null || true
-cp -a /var/lib/zerotier-one/identity.secret "$BACKUP_DIR/zerotier-identity.secret" 2>/dev/null || true
-zerotier-cli listnetworks -j > "$BACKUP_DIR/zerotier-networks.json" 2>/dev/null || true
-
 # false-mirror storage (TinyDB, qBittorrent config, tracker)
 cp -a /storage/. "$BACKUP_DIR/storage/"
 

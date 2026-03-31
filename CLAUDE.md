@@ -20,7 +20,7 @@ git clone https://github.com/icyberdeveloper/false-mirror /app/false-mirror
 bash /app/false-mirror/deploy/bootstrap.sh
 ```
 
-Скрипт `deploy/bootstrap.sh` восстановит: VPN (AmneziaWG), Nebula, ZeroTier, autofs (NAS), healthcheck, storage (TinyDB, qBittorrent config), Docker-контейнеры (false-mirror + bot + qBittorrent), backup cron. Все конфиги и секреты берёт из бэкапа на NAS (`/mnt/library/.server-backup/`).
+Скрипт `deploy/bootstrap.sh` восстановит: VPN (AmneziaWG), autofs (NAS), healthcheck, storage (TinyDB, qBittorrent config), Docker-контейнеры (false-mirror + bot + qBittorrent), backup cron. Все конфиги и секреты берёт из бэкапа на NAS (`/mnt/library/.server-backup/`).
 
 После запуска проверить:
 1. `docker-compose ps` — три контейнера Up
@@ -33,7 +33,7 @@ bash /app/false-mirror/deploy/bootstrap.sh
 ### Backup
 
 Ежедневно в 4:00 скрипт `/usr/local/bin/backup-to-nas.sh` копирует на NAS (`/mnt/library/.server-backup/`):
-- VPN конфиг (awg0.conf), Nebula certs, ZeroTier identity
+- VPN конфиг (awg0.conf)
 - `/storage/` (TinyDB баз, qBittorrent config, tracker)
 - compose.yml (содержит секреты: LF_SESSION, TG_BOT_TOKEN)
 - Системные конфиги (healthcheck, autofs, awg-quick service)
@@ -44,8 +44,6 @@ bash /app/false-mirror/deploy/bootstrap.sh
 |---|---|---|
 | `enp114s0` | `192.168.1.34/24` | Физическая LAN, доступ к NAS (`192.168.1.150`) |
 | `awg0` | `10.8.0.4/24` | AmneziaWG VPN, весь внешний трафик через `35.228.37.21:51820` |
-| `nebula1` | `10.80.80.22/24` | Nebula mesh VPN |
-| `zt6ntpzfve` | `192.168.192.126/24` | ZeroTier |
 
 VPN маршрутизация: `AllowedIPs = 0.0.0.0/0` (весь трафик через VPN). Локальная сеть `192.168.1.0/24` доступна напрямую через `enp114s0` (kernel route priority). При восстановлении bootstrap добавляет явный маршрут до локалки.
 
