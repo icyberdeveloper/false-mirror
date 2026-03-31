@@ -17,8 +17,12 @@ logging.basicConfig(level=logging.INFO, format=log_format)
 logging.getLogger('httpx').setLevel(logging.WARNING)
 
 LIBRARY_ROOT = '/library'
+MOBILE_ROOT = '/library/TV Shows SD'
 VIDEO_EXTENSIONS = {'.mkv', '.avi', '.mp4', '.ts', '.m4v'}
-CATEGORIES = ['TV Shows', 'Movies', 'Anime']
+BROWSE_ROOTS = {
+    'Сериалы': '/library/TV Shows SD',
+    'Фильмы': '/library/Movies',
+}
 MAX_FILE_SIZE = 2 * 1024 * 1024 * 1024  # 2GB
 
 
@@ -117,12 +121,11 @@ class Bot:
     async def cmd_browse(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Show top-level categories."""
         buttons = []
-        for cat in CATEGORIES:
-            path = os.path.join(LIBRARY_ROOT, cat)
+        for label, path in BROWSE_ROOTS.items():
             if os.path.isdir(path):
-                buttons.append([InlineKeyboardButton(cat, callback_data=f'b:{self._short_id(cat)}')])
+                buttons.append([InlineKeyboardButton(label, callback_data=f'b:{self._short_id(path)}')])
         if not buttons:
-            await update.message.reply_text('Library is empty.')
+            await update.message.reply_text('Библиотека пуста.')
             return
         await update.message.reply_text('📺 Библиотека:', reply_markup=InlineKeyboardMarkup(buttons))
 
@@ -141,12 +144,10 @@ class Bot:
         data = query.data
 
         if data == 'b:__root__':
-            # Re-show categories
             buttons = []
-            for cat in CATEGORIES:
-                path = os.path.join(LIBRARY_ROOT, cat)
+            for label, path in BROWSE_ROOTS.items():
                 if os.path.isdir(path):
-                    buttons.append([InlineKeyboardButton(cat, callback_data=f'b:{self._short_id(cat)}')])
+                    buttons.append([InlineKeyboardButton(label, callback_data=f'b:{self._short_id(path)}')])
             await query.edit_message_text('📺 Библиотека:', reply_markup=InlineKeyboardMarkup(buttons))
             return
 
@@ -161,28 +162,26 @@ class Bot:
         elif prefix == 'f':
             await self._send_file(query, rel_path)
 
-    async def _browse_dir(self, query, rel_path):
+    async def _browse_dir(self, query, abs_path):
         """Browse a directory, show subdirs and video files."""
-        full_path = os.path.join(LIBRARY_ROOT, rel_path)
-
-        if not os.path.isdir(full_path):
+        if not os.path.isdir(abs_path):
             await query.edit_message_text('Папка не найдена.')
             return
 
-        entries = sorted(os.listdir(full_path))
+        entries = sorted(os.listdir(abs_path))
         buttons = []
 
         # Subdirectories
-        dirs = [e for e in entries if os.path.isdir(os.path.join(full_path, e))]
+        dirs = [e for e in entries if os.path.isdir(os.path.join(abs_path, e))]
         for d in dirs:
-            child_path = f'{rel_path}/{d}'
+            child_path = os.path.join(abs_path, d)
             buttons.append([InlineKeyboardButton(f'📁 {d}', callback_data=f'b:{self._short_id(child_path)}')])
 
         # Video files
         files = [e for e in entries if os.path.splitext(e)[1].lower() in VIDEO_EXTENSIONS]
         for f in files:
-            file_path = f'{rel_path}/{f}'
-            size = os.path.getsize(os.path.join(full_path, f))
+            file_path = os.path.join(abs_path, f)
+            size = os.path.getsize(file_path)
             size_str = f'{size / (1024**3):.1f}GB' if size >= 1024**3 else f'{size / (1024**2):.0f}MB'
             label = f'🎬 {f} ({size_str})'
             if len(label) > 60:
@@ -190,45 +189,44 @@ class Bot:
             buttons.append([InlineKeyboardButton(label, callback_data=f'f:{self._short_id(file_path)}')])
 
         # Back button
-        parent = '/'.join(rel_path.split('/')[:-1])
-        if parent:
+        parent = os.path.dirname(abs_path)
+        # Only show back if not at a root level
+        is_root = abs_path in BROWSE_ROOTS.values()
+        if not is_root:
             buttons.append([InlineKeyboardButton('⬅️ Назад', callback_data=f'b:{self._short_id(parent)}')])
         else:
             buttons.append([InlineKeyboardButton('⬅️ Назад', callback_data='b:__root__')])
 
         if not dirs and not files:
-            await query.edit_message_text(f'📂 {rel_path}\n\nПусто.')
+            await query.edit_message_text(f'📂 {os.path.basename(abs_path)}\n\nПусто.')
             return
 
-        # Telegram callback_data limit is 64 bytes — check and paginate if needed
-        title = rel_path.split('/')[-1] or rel_path
+        title = os.path.basename(abs_path)
         await query.edit_message_text(
             f'📂 {title}',
             reply_markup=InlineKeyboardMarkup(buttons),
         )
 
-    async def _send_file(self, query, rel_path):
+    async def _send_file(self, query, abs_path):
         """Send a video file from NAS."""
-        full_path = os.path.join(LIBRARY_ROOT, rel_path)
-
-        if not os.path.isfile(full_path):
+        if not os.path.isfile(abs_path):
             await query.edit_message_text('Файл не найден.')
             return
 
-        size = os.path.getsize(full_path)
+        size = os.path.getsize(abs_path)
         if size > MAX_FILE_SIZE:
             size_gb = size / (1024**3)
             await query.edit_message_text(f'❌ Файл слишком большой: {size_gb:.1f}GB (лимит 2GB)')
             return
 
-        filename = os.path.basename(full_path)
+        filename = os.path.basename(abs_path)
         size_str = f'{size / (1024**3):.1f}GB' if size >= 1024**3 else f'{size / (1024**2):.0f}MB'
 
         await query.edit_message_text(f'⏳ Отправляю {filename} ({size_str})...')
 
         try:
             chat_id = query.message.chat_id
-            with open(full_path, 'rb') as f:
+            with open(abs_path, 'rb') as f:
                 await query.get_bot().send_document(
                     chat_id=chat_id,
                     document=f,

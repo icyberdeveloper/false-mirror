@@ -11,6 +11,7 @@ qbittorrent:
   password: 'adminadmin'
   download_dir: '/downloads/TV Shows'
   movies_dir: '/downloads/Movies'
+  mobile_dir: '/downloads/TV Shows SD'
   incomplete_dir: '/incomplete'
 
 anilibria:

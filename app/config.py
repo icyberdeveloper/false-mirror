@@ -23,6 +23,7 @@ class QbittorrentConfig:
         self.password = os.environ.get('QB_PASSWORD', cfg.get('password', 'adminadmin'))
         self.download_dir = cfg.get('download_dir', '/downloads/TV Shows')
         self.movies_dir = cfg.get('movies_dir', '/downloads/Movies')
+        self.mobile_dir = cfg.get('mobile_dir', '/downloads/TV Shows SD')
         self.incomplete_dir = cfg.get('incomplete_dir', '')
 
 

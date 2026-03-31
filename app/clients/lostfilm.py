@@ -10,7 +10,7 @@ from services import network
 logger = logging.getLogger(__name__)
 
 
-def get_series(library, qbittorrent, download_dir, torrent_mirror, lf_session, codes, proxies, tracker=None):
+def get_series(library, qbittorrent, download_dir, torrent_mirror, lf_session, codes, proxies, tracker=None, mobile_dir=None):
     added = []
     logger.info(f'LostFilm: processing {len(codes)} shows')
 
@@ -43,6 +43,8 @@ def get_series(library, qbittorrent, download_dir, torrent_mirror, lf_session, c
 
                 try:
                     redirect_url = _get_redirect_url(torrent_mirror, series_id, lf_session, proxies)
+
+                    # HD version (1080p preferred)
                     torrent_url = _get_torrent_url(redirect_url, proxies)
                     if not torrent_url:
                         logger.warning(f'LostFilm: no torrent link for {code} S{season_str}E{episode_str}')
@@ -53,6 +55,14 @@ def get_series(library, qbittorrent, download_dir, torrent_mirror, lf_session, c
                     qbittorrent.download_torrent(torrent_url, download_path, proxies, tracker=tracker, label=label)
                     added.append(label)
                     logger.info(f'LostFilm: queued {ru_name} S{season_str}E{episode_str}')
+
+                    # SD version for Telegram (lowest quality)
+                    if mobile_dir:
+                        sd_url = _get_torrent_url(redirect_url, proxies, quality_prefs=['MP4', 'SD', 'HDTVRip', '720p'])
+                        if sd_url and sd_url != torrent_url:
+                            sd_path = f'{mobile_dir}/{ru_name} ({release_year})/Season {season_str}'
+                            qbittorrent.download_torrent(sd_url, sd_path, proxies)
+                            logger.info(f'LostFilm: queued SD {ru_name} S{season_str}E{episode_str}')
 
                 except Exception as e:
                     logger.error(f'LostFilm: error processing {code} S{season_str}E{episode_str}: {e}')
@@ -146,22 +156,38 @@ def _get_redirect_url(torrent_mirror, series_id, lf_session, proxies):
     return redirect
 
 
-def _get_torrent_url(redirect_url, proxies):
+def _get_torrent_url(redirect_url, proxies, quality_prefs=None):
     if not redirect_url:
         return None
+    if quality_prefs is None:
+        quality_prefs = ['1080p', '720p', 'HDTVRip', 'MP4', 'SD']
     res = network.get(redirect_url, proxies=proxies)
     soup = BeautifulSoup(res.text, 'html.parser')
 
-    for quality in ['1080p', '720p', 'HDTVRip']:
-        link = soup.find(lambda tag: (
+    for quality in quality_prefs:
+        link = soup.find(lambda tag, q=quality: (
             tag.name == 'a'
             and tag.has_attr('href')
-            and quality in tag.text
+            and q in tag.text
         ))
         if link:
             return link['href']
 
     return None
+
+
+def _get_all_torrent_urls(redirect_url, proxies):
+    """Return dict of {quality_label: url} for all available qualities."""
+    if not redirect_url:
+        return {}
+    res = network.get(redirect_url, proxies=proxies)
+    soup = BeautifulSoup(res.text, 'html.parser')
+    result = {}
+    for link in soup.find_all('a', href=True):
+        text = link.get_text().strip()
+        if link['href'].startswith('http') and text:
+            result[text] = link['href']
+    return result
 
 
 def _get_season_number(series_id):
