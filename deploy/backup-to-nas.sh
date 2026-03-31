@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-BACKUP_DIR="/mnt/library/.server-backup"
+BACKUP_DIR="/mnt/backups/server"
 DATE=$(date +%Y%m%d)
 
 mkdir -p "$BACKUP_DIR"

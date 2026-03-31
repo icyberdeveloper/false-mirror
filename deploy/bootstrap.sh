@@ -5,13 +5,13 @@
 #
 # Usage:
 #   1. Install git + NFS: apt update && apt install -y git nfs-common
-#   2. Mount NAS:         mount -t nfs4 192.168.1.150:/volume1/library /mnt/library
+#   2. Mount NAS backups: mkdir -p /mnt/backups && mount -t nfs4 192.168.1.150:/volume1/backups /mnt/backups
 #   3. Clone repo:        git clone https://github.com/icyberdeveloper/false-mirror /app/false-mirror
-#   4. Run:               bash /app/false-mirror/bootstrap.sh
+#   4. Run:               bash /app/false-mirror/deploy/bootstrap.sh
 #
 set -euo pipefail
 
-BACKUP_DIR="/mnt/library/.server-backup"
+BACKUP_DIR="/mnt/backups/server"
 
 echo "============================================"
 echo "  false-mirror server bootstrap"
@@ -19,7 +19,7 @@ echo "============================================"
 
 if [ ! -d "$BACKUP_DIR" ]; then
     echo "ERROR: Backup not found at $BACKUP_DIR"
-    echo "Mount NAS first: mount -t nfs4 192.168.1.150:/volume1/library /mnt/library"
+    echo "Mount NAS first: mkdir -p /mnt/backups && mount -t nfs4 192.168.1.150:/volume1/backups /mnt/backups"
     exit 1
 fi
 
@@ -82,6 +82,7 @@ cp "$BACKUP_DIR/system/auto.mnt" /etc/auto.mnt 2>/dev/null || \
 [ -f /etc/auto.mnt ] || cat > /etc/auto.mnt << 'EOF'
 library -fstype=nfs4,rw,noatime,nolock,intr,tcp,actimeo=1800 192.168.1.150:/volume1/library
 tmp     -fstype=nfs4,rw,noatime,nolock,intr,tcp,actimeo=1800 192.168.1.150:/volume1/tmp
+backups -fstype=nfs4,rw,noatime,nolock,intr,tcp,actimeo=1800 192.168.1.150:/volume1/backups
 EOF
 
 # Unmount static mounts if any, let autofs handle it

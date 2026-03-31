@@ -15,12 +15,12 @@ This server runs two systems:
 
 ```bash
 apt update && apt install -y git nfs-common
-mount -t nfs4 192.168.1.150:/volume1/library /mnt/library
+mkdir -p /mnt/backups && mount -t nfs4 192.168.1.150:/volume1/backups /mnt/backups
 git clone https://github.com/icyberdeveloper/false-mirror /app/false-mirror
 bash /app/false-mirror/deploy/bootstrap.sh
 ```
 
-Скрипт `deploy/bootstrap.sh` восстановит: VPN (AmneziaWG), autofs (NAS), healthcheck, storage (TinyDB, qBittorrent config), Docker-контейнеры (false-mirror + bot + qBittorrent), backup cron. Все конфиги и секреты берёт из бэкапа на NAS (`/mnt/library/.server-backup/`).
+Скрипт `deploy/bootstrap.sh` восстановит: VPN (AmneziaWG), autofs (NAS), healthcheck, storage (TinyDB, qBittorrent config), Docker-контейнеры (false-mirror + bot + qBittorrent), backup cron. Все конфиги и секреты берёт из бэкапа на NAS (`/mnt/backups/server/`).
 
 После запуска проверить:
 1. `docker-compose ps` — три контейнера Up
@@ -32,7 +32,7 @@ bash /app/false-mirror/deploy/bootstrap.sh
 
 ### Backup
 
-Ежедневно в 4:00 скрипт `/usr/local/bin/backup-to-nas.sh` копирует на NAS (`/mnt/library/.server-backup/`):
+Ежедневно в 4:00 скрипт `/usr/local/bin/backup-to-nas.sh` копирует на NAS (`/mnt/backups/server/`):
 - VPN конфиг (awg0.conf)
 - `/storage/` (TinyDB баз, qBittorrent config, tracker)
 - compose.yml (содержит секреты: LF_SESSION, TG_BOT_TOKEN)
@@ -54,6 +54,7 @@ VPN маршрутизация: `AllowedIPs = 0.0.0.0/0` (весь трафик 
 NAS `192.168.1.150` mounted via **autofs** (not static fstab):
 - `/mnt/library` → `192.168.1.150:/volume1/library` — completed downloads (TV Shows, Anime, Movies)
 - `/mnt/tmp` → `192.168.1.150:/volume1/tmp` — incomplete downloads
+- `/mnt/backups` → `192.168.1.150:/volume1/backups` — server backups
 
 Config: `/etc/auto.master.d/mnt.autofs` → `/etc/auto.mnt`. Timeout 300s, `--ghost` keeps dirs visible when unmounted. Old fstab entries commented out.
 
