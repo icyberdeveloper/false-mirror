@@ -226,15 +226,27 @@ class Bot:
 
         try:
             chat_id = query.message.chat_id
+            ext = os.path.splitext(abs_path)[1].lower()
             with open(abs_path, 'rb') as f:
-                await query.get_bot().send_document(
-                    chat_id=chat_id,
-                    document=f,
-                    filename=filename,
-                    read_timeout=600,
-                    write_timeout=600,
-                    connect_timeout=60,
-                )
+                if ext in {'.mkv', '.mp4', '.avi', '.m4v', '.ts'}:
+                    await query.get_bot().send_video(
+                        chat_id=chat_id,
+                        video=f,
+                        filename=filename,
+                        supports_streaming=True,
+                        read_timeout=600,
+                        write_timeout=600,
+                        connect_timeout=60,
+                    )
+                else:
+                    await query.get_bot().send_document(
+                        chat_id=chat_id,
+                        document=f,
+                        filename=filename,
+                        read_timeout=600,
+                        write_timeout=600,
+                        connect_timeout=60,
+                    )
             await query.get_bot().send_message(chat_id=chat_id, text=f'✅ {filename}')
         except Exception as e:
             logger.error(f'Failed to send file {full_path}: {e}')
