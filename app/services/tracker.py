@@ -1,4 +1,5 @@
 import logging
+import os
 import time
 import requests
 
@@ -79,10 +80,12 @@ class Tracker:
             # Completed in qBittorrent?
             if states & COMPLETED_STATES and all(p >= 1.0 for p in progresses):
                 # Verify file exists on NAS
-                # save_path is like /downloads/TV Shows/Show (2019)/Season 03
-                # NAS path is library_dir/Show (2019)/Season 03
-                relative = save_path.replace('/downloads/TV Shows/', '')
-                nas_path = f'{library_dir}/{relative}'
+                # save_path is like /downloads/TV Shows/Show/Season 03 or /downloads/Movies/Film
+                # NAS root is library_dir's parent (e.g. /library)
+                # Map /downloads/X/... → /library/X/...
+                relative = save_path.split('/downloads/', 1)[-1] if '/downloads/' in save_path else save_path
+                nas_root = os.path.dirname(library_dir)  # /library
+                nas_path = f'{nas_root}/{relative}'
 
                 if self._has_video_files(nas_path):
                     self._notify(f'✅ <b>{label}</b>\nСкачан и на NAS')

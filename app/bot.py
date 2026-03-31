@@ -7,7 +7,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
 from config import from_file
 from services.database import Database
-from worker import check_lostfilm_show, check_anilibria_show
+from worker import check_lostfilm_show, check_lostfilm_movie, check_anilibria_show
 
 
 logger = logging.getLogger(__name__)
@@ -32,8 +32,8 @@ class Bot:
     async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             'Commands:\n'
-            '/download <link> - add a show from LostFilm or Anilibria\n'
-            '/list - show tracked series'
+            '/download <link> - add a show or movie from LostFilm or Anilibria\n'
+            '/list - show tracked series and movies'
         )
 
     async def cmd_download(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -47,9 +47,20 @@ class Bot:
 
         import re
         lf_match = re.search(r'lostfilm\.\w+/series/([^/]+)', url)
+        lf_movie = re.search(r'lostfilm\.\w+/movies/([^/]+)', url)
         al_match = re.search(r'anilibria\.\w+/release/([^/.]+)', url)
 
-        if lf_match:
+        if lf_movie:
+            code = lf_movie.group(1)
+            self.db.save_new_movie_code(code)
+            await update.message.reply_text(f'Added LostFilm movie: {code}\nЗапускаю проверку...')
+            threading.Thread(
+                target=self._check_and_reply,
+                args=(update.effective_chat.id, 'lostfilm_movie', code),
+                daemon=True,
+            ).start()
+
+        elif lf_match:
             code = lf_match.group(1)
             self.db.save_new_lostfilm_code(code)
             await update.message.reply_text(f'Added LostFilm show: {code}\nЗапускаю проверку...')
@@ -75,6 +86,7 @@ class Bot:
     async def cmd_list(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         lf_codes = self.db.get_lostfilm_codes()
         al_codes = self.db.get_anilibria_codes()
+        mv_codes = self.db.get_movie_codes()
 
         lines = []
         if lf_codes:
@@ -84,6 +96,10 @@ class Bot:
         if al_codes:
             lines.append('Anilibria:')
             for item in al_codes:
+                lines.append(f'  - {item["code"]}')
+        if mv_codes:
+            lines.append('Movies:')
+            for item in mv_codes:
                 lines.append(f'  - {item["code"]}')
 
         if not lines:
@@ -97,6 +113,8 @@ class Bot:
         try:
             if provider == 'lostfilm':
                 added = check_lostfilm_show(code)
+            elif provider == 'lostfilm_movie':
+                added = check_lostfilm_movie(code)
             else:
                 added = check_anilibria_show(code)
 

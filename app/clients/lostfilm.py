@@ -63,6 +63,49 @@ def get_series(library, qbittorrent, download_dir, torrent_mirror, lf_session, c
     return added
 
 
+def get_movie(qbittorrent, movies_dir, torrent_mirror, lf_session, code, proxies, tracker=None):
+    """Download a single movie from LostFilm."""
+    logger.info(f'LostFilm movie: checking {code}')
+
+    movie_url = f'{torrent_mirror}/movies/{code}'
+    res = network.get(movie_url, proxies=proxies)
+
+    # Get movie name
+    soup = BeautifulSoup(res.text, 'html.parser')
+    title_tag = soup.find('h1', {'class': 'title-ru'}) or soup.find(class_='title-ru')
+    ru_name = title_tag.text.strip() if title_tag else code.replace('_', ' ')
+
+    # Get year
+    year_match = re.search(r'(\d{4})\s*г\.', res.text)
+    release_year = int(year_match.group(1)) if year_match else 0
+
+    # Get PlayEpisode ID
+    series_ids = re.findall(r"PlayEpisode\('(\d+)'\)", res.text)
+    if not series_ids:
+        logger.warning(f'LostFilm movie: no PlayEpisode ID for {code}')
+        return []
+
+    series_id = series_ids[0]
+
+    # Check if already downloading
+    if qbittorrent.episode_in_queue(code, '01', '01'):
+        logger.info(f'LostFilm movie: {code} already in queue')
+        return []
+
+    redirect_url = _get_redirect_url(torrent_mirror, series_id, lf_session, proxies)
+    torrent_url = _get_torrent_url(redirect_url, proxies)
+    if not torrent_url:
+        logger.warning(f'LostFilm movie: no torrent link for {code}')
+        return []
+
+    folder = f'{ru_name} ({release_year})' if release_year else ru_name
+    download_path = f'{movies_dir}/{folder}'
+    label = f'{ru_name} ({release_year})' if release_year else ru_name
+    qbittorrent.download_torrent(torrent_url, download_path, proxies, tracker=tracker, label=label)
+    logger.info(f'LostFilm movie: queued {label}')
+    return [label]
+
+
 def _get_name_and_year(main_page_url, proxies):
     res = network.get(main_page_url, proxies=proxies)
     soup = BeautifulSoup(res.text, 'html.parser')

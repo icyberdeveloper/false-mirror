@@ -10,6 +10,7 @@ qbittorrent:
   username: 'admin'
   password: 'adminadmin'
   download_dir: '/downloads/TV Shows'
+  movies_dir: '/downloads/Movies'
   incomplete_dir: '/incomplete'
 
 anilibria:

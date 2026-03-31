@@ -2,9 +2,10 @@ from tinydb import Query, TinyDB
 
 
 class Database:
-    def __init__(self, anilibria_db_path, lostfilm_db_path):
+    def __init__(self, anilibria_db_path, lostfilm_db_path, movies_db_path='/storage/movies.json'):
         self.anilibria = TinyDB(anilibria_db_path)
         self.lostfilm = TinyDB(lostfilm_db_path)
+        self.movies = TinyDB(movies_db_path)
 
     def get_lostfilm_codes(self):
         return self.lostfilm.all()
@@ -21,3 +22,11 @@ class Database:
         q = Query()
         if not self.anilibria.search(q.code == code):
             self.anilibria.insert({'code': code})
+
+    def get_movie_codes(self):
+        return self.movies.all()
+
+    def save_new_movie_code(self, code):
+        q = Query()
+        if not self.movies.search(q.code == code):
+            self.movies.insert({'code': code})

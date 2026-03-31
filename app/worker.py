@@ -53,6 +53,22 @@ def check_lostfilm_show(code):
         return []
 
 
+def check_lostfilm_movie(code):
+    """Check one LostFilm movie. Fully isolated."""
+    try:
+        cfg, db, library, tracker, qbt = _load_env()
+        added = lostfilm.get_movie(
+            qbt, cfg.qbittorrent.movies_dir,
+            cfg.lostfilm.torrent_mirror, cfg.lostfilm.lf_session,
+            code, cfg.proxy.as_dict, tracker=tracker,
+        )
+        logger.info(f'LostFilm movie [{code}]: added {len(added)}')
+        return added
+    except Exception as e:
+        logger.error(f'LostFilm movie [{code}]: failed: {e}')
+        return []
+
+
 def check_anilibria_show(code):
     """Check one Anilibria show for new episodes. Fully isolated."""
     try:

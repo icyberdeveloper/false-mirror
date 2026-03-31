@@ -10,7 +10,7 @@ import logging
 
 from config import from_file
 from services.database import Database
-from worker import check_lostfilm_show, check_anilibria_show, _load_env
+from worker import check_lostfilm_show, check_lostfilm_movie, check_anilibria_show, _load_env
 from services.renamer import Renamer
 
 logger = logging.getLogger(__name__)
@@ -41,6 +41,8 @@ def schedule_show(delay, provider, code):
         logger.info(f'Scheduled check: {provider}/{code} (after {delay}s delay)')
         if provider == 'lostfilm':
             check_lostfilm_show(code)
+        elif provider == 'lostfilm_movie':
+            check_lostfilm_movie(code)
         else:
             check_anilibria_show(code)
     t = threading.Thread(target=run, daemon=True)
@@ -83,6 +85,8 @@ def main():
             shows.append(('lostfilm', item['code']))
         for item in db.get_anilibria_codes():
             shows.append(('anilibria', item['code']))
+        for item in db.get_movie_codes():
+            shows.append(('lostfilm_movie', item['code']))
 
         if not shows:
             logger.info('No tracked shows, sleeping 60s...')
