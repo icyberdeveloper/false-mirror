@@ -6,7 +6,7 @@ import logging
 
 import os
 
-from domain.config import from_file
+from config import from_file
 from services.database import Database
 from services.library import Library
 from services.qbittorrent import QBittorrent

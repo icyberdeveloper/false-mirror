@@ -161,9 +161,9 @@ systemctl enable --now healthcheck.timer
 echo "[8/8] Starting false-mirror..."
 
 # Restore compose.yml with secrets
-cp "$BACKUP_DIR/compose.yml" /app/false-mirror/compose.yml
+cp "$BACKUP_DIR/compose.yml" /app/false-mirror/deploy/compose.yml
 
-cd /app/false-mirror
+cd /app/false-mirror/deploy
 docker-compose build
 docker-compose up -d
 
@@ -179,7 +179,7 @@ echo "  Bootstrap complete!"
 echo "============================================"
 echo ""
 echo "Verify:"
-echo "  docker-compose ps          # Containers running"
+echo "  cd /app/false-mirror/deploy && docker-compose ps  # Containers running"
 echo "  awg show awg0              # VPN status"
 echo "  ls /mnt/library/           # NAS mount"
 echo "  systemctl status healthcheck.timer  # Healthcheck"

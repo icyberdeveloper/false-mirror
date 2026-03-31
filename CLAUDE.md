@@ -17,10 +17,10 @@ This server runs two systems:
 apt update && apt install -y git nfs-common
 mount -t nfs4 192.168.1.150:/volume1/library /mnt/library
 git clone https://github.com/icyberdeveloper/false-mirror /app/false-mirror
-bash /app/false-mirror/bootstrap.sh
+bash /app/false-mirror/deploy/bootstrap.sh
 ```
 
-Скрипт `bootstrap.sh` восстановит: VPN (AmneziaWG), Nebula, ZeroTier, autofs (NAS), healthcheck, storage (TinyDB, qBittorrent config), Docker-контейнеры (false-mirror + bot + qBittorrent), backup cron. Все конфиги и секреты берёт из бэкапа на NAS (`/mnt/library/.server-backup/`).
+Скрипт `deploy/bootstrap.sh` восстановит: VPN (AmneziaWG), Nebula, ZeroTier, autofs (NAS), healthcheck, storage (TinyDB, qBittorrent config), Docker-контейнеры (false-mirror + bot + qBittorrent), backup cron. Все конфиги и секреты берёт из бэкапа на NAS (`/mnt/library/.server-backup/`).
 
 После запуска проверить:
 1. `docker-compose ps` — три контейнера Up
@@ -68,7 +68,7 @@ Runs every 5 min via systemd timer (`healthcheck.timer`). Checks:
 
 Sends alerts to Telegram (bot token from compose.yml, chat_id `197650166`). State files in `/var/lib/healthcheck/` prevent alert spam — notifies once on failure, once on recovery.
 
-### Docker Compose (`/app/false-mirror/compose.yml`)
+### Docker Compose (`/app/false-mirror/deploy/compose.yml`)
 
 Three containers, all `network_mode: host`:
 - `qbittorrent` — linuxserver image, WebUI on `:8080`, torrenting on `:6882`
@@ -76,6 +76,7 @@ Three containers, all `network_mode: host`:
 - `nocron` (bot) — Telegram bot (immediate checks on `/download`)
 
 ```bash
+cd /app/false-mirror/deploy
 docker-compose up -d        # Start all
 docker-compose stop         # Stop all
 docker-compose logs -f      # Follow logs
@@ -87,16 +88,45 @@ Note: uses docker-compose v1 (`docker-compose`, not `docker compose`).
 
 ## false-mirror (`/app/false-mirror/`)
 
+### Project Structure
+
+```
+false-mirror/
+├── app/                    # Python application
+│   ├── scheduler.py        # Periodic checks (entry point for false-mirror container)
+│   ├── bot.py              # Telegram bot (entry point for nocron container)
+│   ├── worker.py           # Isolated per-series check functions
+│   ├── config.py           # Config parsing (YAML + env vars)
+│   ├── clients/            # Data providers
+│   │   ├── anilibria.py    # AniLibria REST API
+│   │   └── lostfilm.py     # LostFilm HTML scraper
+│   └── services/           # Shared services
+│       ├── database.py     # TinyDB wrapper
+│       ├── library.py      # Filesystem scanner
+│       ├── qbittorrent.py  # qBittorrent API
+│       ├── tracker.py      # Post-download verification + Telegram alerts
+│       ├── renamer.py      # File renaming
+│       └── network.py      # HTTP with retry
+├── deploy/                 # Infrastructure
+│   ├── compose.yml         # Docker Compose (contains secrets)
+│   ├── Dockerfile          # Scheduler container
+│   ├── Dockerfile.bot      # Bot container
+│   ├── bootstrap.sh        # Full server recovery script
+│   └── backup-to-nas.sh    # Daily backup to NAS
+├── config.yaml             # Application config
+├── requirements.txt        # Python dependencies
+└── CLAUDE.md
+```
+
 ### Running
 
 ```bash
+cd /app/false-mirror/deploy
 docker-compose up -d              # Start all
-python scheduler.py               # Run scheduler directly
-python bot.py                     # Run Telegram bot directly
-pip install -r requirements.txt   # Install dependencies
+docker-compose build && docker-compose up -d  # Rebuild after code change
 ```
 
-Env vars set in compose.yml: `LF_SESSION`, `TG_BOT_TOKEN`, `HEALTHCHECK_TG_CHAT_ID`. Optional: `QB_USERNAME`, `QB_PASSWORD`.
+Env vars set in deploy/compose.yml: `LF_SESSION`, `TG_BOT_TOKEN`, `HEALTHCHECK_TG_CHAT_ID`. Optional: `QB_USERNAME`, `QB_PASSWORD`.
 
 No test suite or linter is configured.
 
@@ -108,28 +138,11 @@ GitHub Actions on push to main: builds two Docker images (`false-mirror` and `no
 
 Event-driven + periodic. Two triggers, isolated per-series processing:
 
-**Entry points:**
-- **`scheduler.py`** — Each tracked show gets a random time slot within a 1-hour cycle (uniform distribution). Renamer + tracker run separately every 15 min. No "thundering herd" — checks are spread evenly across time.
-- **`bot.py`** — Telegram bot. `/download <url>` saves show to DB and **immediately** triggers a check for that show in a background thread. `/list` shows tracked series. Result sent back to Telegram.
-- **`worker.py`** — Core logic. Isolated functions: `check_lostfilm_show(code)`, `check_anilibria_show(code)`. Each show wrapped in its own try/except — one failure doesn't affect others. Used by both scheduler and bot.
-
-**Providers** (`clients/`):
-- `anilibria.py` — REST API client. Selects best quality torrent (prefers non-HEVC), extracts metadata from franchise data.
-- `lostfilm.py` — HTML scraper (BeautifulSoup). Parses episode IDs from embedded JS, follows multi-step redirects for torrent URLs. Requires `LF_SESSION` cookie. Prefers 1080p.
-
-**Services** (`services/`):
-- `database.py` — TinyDB wrapper, per-provider JSON files for tracked show codes.
-- `library.py` — Filesystem scanner checking `{root}/{Show Name} ({year})/Season {N}/` for existing episodes.
-- `qbittorrent.py` — Wraps python-qbittorrent. Indexes active torrents, checks queue before downloading.
-- `tracker.py` — Post-download verification. Tracks torrent lifecycle in `/storage/tracker.json`. Each cycle checks qBittorrent API state: completed → verifies file on NAS, error/stalled → alerts. Sends Telegram notifications (one-time per event, no spam).
-- `renamer.py` — Regex-based file renaming to `Show Name - s##e##.ext` format.
-- `network.py` — HTTP `get()` with retry (5 tries, exponential backoff).
-
-**Configuration** (`domain/config.py` + `config.yaml`): YAML config with typed dataclasses. Env vars override YAML for secrets.
+- **`app/scheduler.py`** — Each tracked show gets a random time slot within a 1-hour cycle (uniform distribution). Renamer + tracker run separately every 15 min.
+- **`app/bot.py`** — Telegram bot. `/download <url>` saves show to DB and **immediately** triggers a check for that show in a background thread. `/list` shows tracked series.
+- **`app/worker.py`** — Core logic: `check_lostfilm_show(code)`, `check_anilibria_show(code)`. Each show in its own try/except. Used by both scheduler and bot.
 
 **Duplicate prevention** — three layers: database check → filesystem scan → qBittorrent queue check.
-
-**Configuration** uses scalar `torrent_mirror`/`api_mirror` fields (not arrays).
 
 ## amneziawg-go (`/root/amneziawg-go/`)
 

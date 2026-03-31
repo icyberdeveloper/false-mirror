@@ -8,7 +8,7 @@ import time
 import threading
 import logging
 
-from domain.config import from_file
+from config import from_file
 from services.database import Database
 from worker import check_lostfilm_show, check_anilibria_show, _load_env
 from services.renamer import Renamer

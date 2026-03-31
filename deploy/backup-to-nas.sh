@@ -32,7 +32,7 @@ cp /etc/auto.mnt "$BACKUP_DIR/system/"
 cp /etc/systemd/system/awg-quick@.service "$BACKUP_DIR/system/"
 
 # Compose (contains secrets)
-cp /app/false-mirror/compose.yml "$BACKUP_DIR/compose.yml"
+cp /app/false-mirror/deploy/compose.yml "$BACKUP_DIR/compose.yml"
 
 # Timestamp
 date > "$BACKUP_DIR/last-backup.txt"

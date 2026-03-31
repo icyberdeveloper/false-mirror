@@ -17,8 +17,8 @@ services:
 
   false-mirror:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: deploy/Dockerfile
     container_name: false-mirror
     environment:
       - LF_SESSION=9277a695061f92112a9671814ecf230b.2214896
@@ -36,8 +36,8 @@ services:
 
   bot:
     build:
-      context: .
-      dockerfile: Dockerfile.bot
+      context: ..
+      dockerfile: deploy/Dockerfile.bot
     container_name: nocron
     environment:
       - TG_BOT_TOKEN=6934685680:AAF1uNpBNVya6ljNFrxahUsli4ZezRstZYo
