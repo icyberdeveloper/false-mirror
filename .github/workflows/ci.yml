@@ -26,11 +26,15 @@ jobs:
           context: .
           file: deploy/Dockerfile
           push: true
-          tags: icyberdeveloper/false-mirror:latest
+          tags: |
+            icyberdeveloper/false-mirror:latest
+            icyberdeveloper/false-mirror:${{ github.sha }}
       - name: Build and push bot
         uses: docker/build-push-action@v5
         with:
           context: .
           file: deploy/Dockerfile.bot
           push: true
-          tags: icyberdeveloper/nocron:latest
+          tags: |
+            icyberdeveloper/nocron:latest
+            icyberdeveloper/nocron:${{ github.sha }}
