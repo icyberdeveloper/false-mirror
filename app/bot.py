@@ -1,9 +1,10 @@
 import os
+import re
 import logging
 import threading
 
-from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 
 from config import from_file
 from services.database import Database
@@ -15,25 +16,40 @@ log_format = '%(asctime)s [%(levelname)s] %(name)s - %(message)s'
 logging.basicConfig(level=logging.INFO, format=log_format)
 logging.getLogger('httpx').setLevel(logging.WARNING)
 
+LIBRARY_ROOT = '/library'
+VIDEO_EXTENSIONS = {'.mkv', '.avi', '.mp4', '.ts', '.m4v'}
+CATEGORIES = ['TV Shows', 'Movies', 'Anime']
+MAX_FILE_SIZE = 2 * 1024 * 1024 * 1024  # 2GB
+
 
 class Bot:
-    def __init__(self, token, db):
+    def __init__(self, token, db, base_url=None):
         self.db = db
-        self.app = ApplicationBuilder().token(token).build()
+        self._path_map = {}  # short_id → full path
+        self._path_counter = 0
+        builder = ApplicationBuilder().token(token)
+        if base_url:
+            builder = builder.base_url(f'{base_url}/bot').base_file_url(f'{base_url}/file/bot')
+        self.app = builder.build()
         self.app.add_handler(CommandHandler('start', self.cmd_start))
         self.app.add_handler(CommandHandler('download', self.cmd_download))
         self.app.add_handler(CommandHandler('list', self.cmd_list))
+        self.app.add_handler(CommandHandler('browse', self.cmd_browse))
+        self.app.add_handler(CallbackQueryHandler(self.on_callback))
 
     def run(self):
         logger.info('Bot started polling...')
         self.app.run_polling(allowed_updates=Update.ALL_TYPES)
 
+    # --- Commands ---
+
     @staticmethod
     async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             'Commands:\n'
-            '/download <link> - add a show or movie from LostFilm or Anilibria\n'
-            '/list - show tracked series and movies'
+            '/download <link> - add a show or movie\n'
+            '/browse - browse library on NAS\n'
+            '/list - show tracked series'
         )
 
     async def cmd_download(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -45,7 +61,6 @@ class Bot:
         url = args[0]
         logger.info(f'Download request: {url}')
 
-        import re
         lf_match = re.search(r'lostfilm\.\w+/series/([^/]+)', url)
         lf_movie = re.search(r'lostfilm\.\w+/movies/([^/]+)', url)
         al_match = re.search(r'anilibria\.\w+/release/([^/.]+)', url)
@@ -99,6 +114,137 @@ class Bot:
         else:
             await update.message.reply_text('\n'.join(lines))
 
+    async def cmd_browse(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Show top-level categories."""
+        buttons = []
+        for cat in CATEGORIES:
+            path = os.path.join(LIBRARY_ROOT, cat)
+            if os.path.isdir(path):
+                buttons.append([InlineKeyboardButton(cat, callback_data=f'b:{self._short_id(cat)}')])
+        if not buttons:
+            await update.message.reply_text('Library is empty.')
+            return
+        await update.message.reply_text('📺 Библиотека:', reply_markup=InlineKeyboardMarkup(buttons))
+
+    def _short_id(self, path):
+        """Map a path to a short ID for callback_data (64 byte limit)."""
+        self._path_counter += 1
+        sid = str(self._path_counter)
+        self._path_map[sid] = path
+        return sid
+
+    # --- Callback handler ---
+
+    async def on_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        query = update.callback_query
+        await query.answer()
+        data = query.data
+
+        if data == 'b:__root__':
+            # Re-show categories
+            buttons = []
+            for cat in CATEGORIES:
+                path = os.path.join(LIBRARY_ROOT, cat)
+                if os.path.isdir(path):
+                    buttons.append([InlineKeyboardButton(cat, callback_data=f'b:{self._short_id(cat)}')])
+            await query.edit_message_text('📺 Библиотека:', reply_markup=InlineKeyboardMarkup(buttons))
+            return
+
+        prefix, sid = data.split(':', 1)
+        rel_path = self._path_map.get(sid)
+        if not rel_path:
+            await query.edit_message_text('Сессия истекла. Нажми /browse заново.')
+            return
+
+        if prefix == 'b':
+            await self._browse_dir(query, rel_path)
+        elif prefix == 'f':
+            await self._send_file(query, rel_path)
+
+    async def _browse_dir(self, query, rel_path):
+        """Browse a directory, show subdirs and video files."""
+        full_path = os.path.join(LIBRARY_ROOT, rel_path)
+
+        if not os.path.isdir(full_path):
+            await query.edit_message_text('Папка не найдена.')
+            return
+
+        entries = sorted(os.listdir(full_path))
+        buttons = []
+
+        # Subdirectories
+        dirs = [e for e in entries if os.path.isdir(os.path.join(full_path, e))]
+        for d in dirs:
+            child_path = f'{rel_path}/{d}'
+            buttons.append([InlineKeyboardButton(f'📁 {d}', callback_data=f'b:{self._short_id(child_path)}')])
+
+        # Video files
+        files = [e for e in entries if os.path.splitext(e)[1].lower() in VIDEO_EXTENSIONS]
+        for f in files:
+            file_path = f'{rel_path}/{f}'
+            size = os.path.getsize(os.path.join(full_path, f))
+            size_str = f'{size / (1024**3):.1f}GB' if size >= 1024**3 else f'{size / (1024**2):.0f}MB'
+            label = f'🎬 {f} ({size_str})'
+            if len(label) > 60:
+                label = f'🎬 {f[:45]}... ({size_str})'
+            buttons.append([InlineKeyboardButton(label, callback_data=f'f:{self._short_id(file_path)}')])
+
+        # Back button
+        parent = '/'.join(rel_path.split('/')[:-1])
+        if parent:
+            buttons.append([InlineKeyboardButton('⬅️ Назад', callback_data=f'b:{self._short_id(parent)}')])
+        else:
+            buttons.append([InlineKeyboardButton('⬅️ Назад', callback_data='b:__root__')])
+
+        if not dirs and not files:
+            await query.edit_message_text(f'📂 {rel_path}\n\nПусто.')
+            return
+
+        # Telegram callback_data limit is 64 bytes — check and paginate if needed
+        title = rel_path.split('/')[-1] or rel_path
+        await query.edit_message_text(
+            f'📂 {title}',
+            reply_markup=InlineKeyboardMarkup(buttons),
+        )
+
+    async def _send_file(self, query, rel_path):
+        """Send a video file from NAS."""
+        full_path = os.path.join(LIBRARY_ROOT, rel_path)
+
+        if not os.path.isfile(full_path):
+            await query.edit_message_text('Файл не найден.')
+            return
+
+        size = os.path.getsize(full_path)
+        if size > MAX_FILE_SIZE:
+            size_gb = size / (1024**3)
+            await query.edit_message_text(f'❌ Файл слишком большой: {size_gb:.1f}GB (лимит 2GB)')
+            return
+
+        filename = os.path.basename(full_path)
+        size_str = f'{size / (1024**3):.1f}GB' if size >= 1024**3 else f'{size / (1024**2):.0f}MB'
+
+        await query.edit_message_text(f'⏳ Отправляю {filename} ({size_str})...')
+
+        try:
+            chat_id = query.message.chat_id
+            with open(full_path, 'rb') as f:
+                await query.get_bot().send_document(
+                    chat_id=chat_id,
+                    document=f,
+                    filename=filename,
+                    read_timeout=600,
+                    write_timeout=600,
+                    connect_timeout=60,
+                )
+            await query.get_bot().send_message(chat_id=chat_id, text=f'✅ {filename}')
+        except Exception as e:
+            logger.error(f'Failed to send file {full_path}: {e}')
+            chat_id = query.message.chat_id
+            await query.get_bot().send_message(chat_id=chat_id, text=f'❌ Ошибка отправки: {e}')
+
+    # --- Background check helper ---
+
     def _check_and_reply(self, chat_id, provider, code):
         """Run check in background thread and send result to Telegram."""
         import requests
@@ -119,20 +265,23 @@ class Bot:
             logger.error(f'Immediate check failed for {code}: {e}')
 
         try:
+            base = os.environ.get('TG_BOT_API_URL', 'https://api.telegram.org')
             token = self.app.bot.token
             requests.post(
-                f'https://api.telegram.org/bot{token}/sendMessage',
+                f'{base}/bot{token}/sendMessage',
                 data={'chat_id': chat_id, 'text': msg},
                 timeout=10,
             )
         except Exception as e:
             logger.error(f'Failed to send check result: {e}')
 
+
 def main():
     cfg = from_file(os.path.abspath('config.yaml'))
     db = Database(cfg.anilibria.db_path, cfg.lostfilm.db_path)
 
-    bot = Bot(token=cfg.nocron.token, db=db)
+    base_url = os.environ.get('TG_BOT_API_URL')
+    bot = Bot(token=cfg.nocron.token, db=db, base_url=base_url)
     bot.run()
 
 

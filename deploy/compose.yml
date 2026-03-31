@@ -35,6 +35,19 @@ services:
       qbittorrent:
         condition: service_started
 
+  telegram-bot-api:
+    image: aiogram/telegram-bot-api:latest
+    container_name: telegram-bot-api
+    environment:
+      - TELEGRAM_API_ID=37497928
+      - TELEGRAM_API_HASH=dd3ad11c85dc97f58c9f523e21aa4e31
+      - TELEGRAM_LOCAL=1
+    volumes:
+      - /storage/telegram-bot-api:/var/lib/telegram-bot-api
+      - /mnt/library:/library:ro
+    network_mode: host
+    restart: unless-stopped
+
   bot:
     image: icyberdeveloper/nocron:latest
     build:
@@ -45,6 +58,7 @@ services:
       - TG_BOT_TOKEN=6934685680:AAF1uNpBNVya6ljNFrxahUsli4ZezRstZYo
       - LF_SESSION=9277a695061f92112a9671814ecf230b.2214896
       - HEALTHCHECK_TG_CHAT_ID=197650166
+      - TG_BOT_API_URL=http://127.0.0.1:8081
     volumes:
       - /storage:/storage
       - /mnt/library:/library
@@ -52,5 +66,7 @@ services:
     network_mode: host
     restart: unless-stopped
     depends_on:
+      telegram-bot-api:
+        condition: service_started
       qbittorrent:
         condition: service_started
