@@ -5,6 +5,9 @@ on:
     branches:
       - "main"
 
+env:
+  QBITTORRENT_VERSION: "5.1.4-r2-ls447"
+
 jobs:
   docker:
     runs-on: ubuntu-latest
@@ -38,3 +41,10 @@ jobs:
           tags: |
             icyberdeveloper/nocron:latest
             icyberdeveloper/nocron:${{ github.sha }}
+      - name: Mirror qBittorrent to Docker Hub
+        run: |
+          docker pull lscr.io/linuxserver/qbittorrent:${{ env.QBITTORRENT_VERSION }}
+          docker tag lscr.io/linuxserver/qbittorrent:${{ env.QBITTORRENT_VERSION }} icyberdeveloper/qbittorrent:${{ env.QBITTORRENT_VERSION }}
+          docker tag lscr.io/linuxserver/qbittorrent:${{ env.QBITTORRENT_VERSION }} icyberdeveloper/qbittorrent:latest
+          docker push icyberdeveloper/qbittorrent:${{ env.QBITTORRENT_VERSION }}
+          docker push icyberdeveloper/qbittorrent:latest
