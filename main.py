@@ -2,81 +2,104 @@ import os
 import time
 import logging
 
-from services.dbcontroller import DbController
-from services.qbittorrent_s import Qbittorent
+from domain.config import from_file
+from services.database import Database
+from services.library import Library
+from services.qbittorrent import QBittorrent
 from services.renamer import Renamer
-from clients import anilibria_client, lostfilm_client
-import domain.config as config
+from services.tracker import Tracker
+from clients import anilibria, lostfilm
+
 
 logger = logging.getLogger(__name__)
-log_format = f'%(asctime)s - [%(levelname)s] - %(name)s - (%(filename)s).%(funcName)s(%(lineno)d) - %(message)s'
+log_format = '%(asctime)s [%(levelname)s] %(name)s - %(message)s'
 logging.basicConfig(level=logging.INFO, format=log_format)
 
 
-def process_anilibria_series(db, qbittorrent, download_dir, torrent_mirror, api_mirror, proxies):
-    try:
-        logger.info('Starting anilibria...')
-        anilibria_codes = db.get_anilibria_codes()
-        anilibria_series = anilibria_client.get_series(
-            db, qbittorrent, download_dir, torrent_mirror,
-            api_mirror, anilibria_codes, proxies
-        )
-        logger.info('Complete anilibria, update ' + str(len(anilibria_series)) + ' series')
-    except Exception as e:
-        logger.error('Unable to complete anilibria series: ' + str(e))
-        raise e
-
-
-def process_lostfilm_series(db, qbittorrent, download_dir, torrent_mirror, lf_session, proxies):
-    try:
-        logger.info('Starting lostfilm...')
-        lostfilm_codes = db.get_lostfilm_codes()
-        lostfilm_series = lostfilm_client.get_series(
-            db, qbittorrent, download_dir, torrent_mirror,
-            lf_session, lostfilm_codes, proxies
-        )
-        logger.info('Complete lostfilm, update ' + str(len(lostfilm_series)) + ' series')
-    except Exception as e:
-        logger.error('Unable to complete lostfilm series: ' + str(e))
-        raise e
+def wait_for_qbittorrent(host, port, timeout=120):
+    import socket
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        try:
+            with socket.create_connection((host, port), timeout=5):
+                return True
+        except OSError:
+            logger.info(f'Waiting for qBittorrent at {host}:{port}...')
+            time.sleep(5)
+    return False
 
 
 def main():
     logger.info('Reading config...')
-    cfg = config.from_file(os.path.abspath('config.yaml'))
+    cfg = from_file(os.path.abspath('config.yaml'))
 
-    logger.info('Init db...')
-    db = DbController(cfg.qbittorrent.db_path, cfg.anilibria.db_path, cfg.lostfilm.db_path)
+    logger.info('Init database...')
+    db = Database(cfg.anilibria.db_path, cfg.lostfilm.db_path)
 
-    logger.info('Init renamer...')
-    renamer = Renamer(cfg.renamer.root_dir, cfg.renamer.anilibria.regex)
+    library = Library(
+        library_dir=cfg.renamer.root_dir + '/TV Shows',
+        incomplete_dir=cfg.qbittorrent.incomplete_dir,
+    )
+    renamer = Renamer(cfg.renamer.root_dir, cfg.renamer.anilibria_regex)
+    tracker = Tracker(
+        db_path='/storage/tracker.json',
+        tg_token=cfg.nocron.token,
+        tg_chat_id=os.environ.get('HEALTHCHECK_TG_CHAT_ID', '197650166'),
+    )
+    proxies = cfg.proxy.as_dict
+
+    logger.info('Waiting for qBittorrent...')
+    wait_for_qbittorrent(cfg.qbittorrent.host, cfg.qbittorrent.port)
 
     while True:
-        logger.info('Starting loop...')
+        logger.info('=== Starting cycle ===')
         try:
-            logger.info('Setup qbittorrent...')
-            qbittorrent = Qbittorent(
+            qbt = QBittorrent(
                 cfg.qbittorrent.host, cfg.qbittorrent.port,
-                cfg.qbittorrent.username, cfg.qbittorrent.password
+                cfg.qbittorrent.username, cfg.qbittorrent.password,
             )
 
-            process_anilibria_series(
-                db, qbittorrent, cfg.qbittorrent.download_dir, cfg.anilibria.torrent_mirror,
-                cfg.anilibria.api_mirror, cfg.base.proxy.as_dict
-            )
-            process_lostfilm_series(
-                db, qbittorrent, cfg.qbittorrent.download_dir, cfg.lostfilm.torrent_mirror,
-                cfg.lostfilm.lf_session, cfg.base.proxy.as_dict
-            )
+            # Anilibria
+            try:
+                codes = db.get_anilibria_codes()
+                added = anilibria.get_series(
+                    library, qbt, cfg.qbittorrent.download_dir,
+                    cfg.anilibria.torrent_mirror, cfg.anilibria.api_mirror,
+                    codes, proxies, tracker=tracker,
+                )
+                logger.info(f'Anilibria: added {len(added)} new episodes')
+            except Exception as e:
+                logger.error(f'Anilibria failed: {e}')
 
-            logger.info('Starting renamer...')
-            renamer.rename()
+            # LostFilm
+            try:
+                codes = db.get_lostfilm_codes()
+                added = lostfilm.get_series(
+                    library, qbt, cfg.qbittorrent.download_dir,
+                    cfg.lostfilm.torrent_mirror, cfg.lostfilm.lf_session,
+                    codes, proxies, tracker=tracker,
+                )
+                logger.info(f'LostFilm: added {len(added)} new episodes')
+            except Exception as e:
+                logger.error(f'LostFilm failed: {e}')
+
+            # Renamer
+            try:
+                renamer.rename()
+            except Exception as e:
+                logger.error(f'Renamer failed: {e}')
+
+            # Post-download verification
+            try:
+                tracker.check(qbt.client, cfg.renamer.root_dir + '/TV Shows')
+            except Exception as e:
+                logger.error(f'Tracker failed: {e}')
 
         except Exception as e:
-            logger.exception(e)
+            logger.exception(f'Cycle error: {e}')
 
-        logger.info('Sleep for ' + str(cfg.base.sleep_interval) + ' minutes')
-        time.sleep(cfg.base.sleep_interval * 60)
+        logger.info(f'Sleeping {cfg.sleep_interval} minutes...')
+        time.sleep(cfg.sleep_interval * 60)
 
 
 if __name__ == '__main__':

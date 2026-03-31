@@ -1,76 +1,69 @@
+import os
 import yaml
 
 
-class Config:
-    class base:
-        sleep_interval: str
-        class proxy:
-            enabled: bool
-            host: str
-            port: str
-            url: str
-            as_dict: dict
-
-    class qbittorrent:
-        host: str
-        port: str
-        username: str
-        password: str
-        download_dir: str
-        db_path: int
-
-    class nocron:
-        token: str
-
-    class renamer:
-        root_dir: str
-        class anilibria:
-            regex: str
-
-    class anilibria:
-        torrent_mirror: str
-        api_mirror: str
-        series_names: str
-        db_path: str
-
-    class lostfilm:
-        torrent_mirror: str
-        lf_session: str
-        series_names: str
-        db_path: str
-
+class ProxyConfig:
     def __init__(self, cfg):
-        self.base.sleep_interval = cfg['global']['interval']
-        self.base.proxy.enabled = cfg['global']['proxy']['enabled']
-        self.base.proxy.as_dict = None
-        if self.base.proxy.enabled:
-            self.base.proxy.host = cfg['global']['proxy']['host']
-            self.base.proxy.port = cfg['global']['proxy']['port']
-            self.base.proxy.url = 'socks5://' + self.base.proxy.host + ':' + str(self.base.proxy.port)
-            self.base.proxy.as_dict = dict(http=self.base.proxy.url, https=self.base.proxy.url)
+        self.enabled = cfg.get('enabled', False)
+        self.host = cfg.get('host', '')
+        self.port = cfg.get('port', 0)
+        if self.enabled and self.host and self.port:
+            self.url = f'socks5://{self.host}:{self.port}'
+            self.as_dict = {'http': self.url, 'https': self.url}
+        else:
+            self.url = None
+            self.as_dict = None
 
-        self.qbittorrent.host = cfg['qbittorrent']['host']
-        self.qbittorrent.port = cfg['qbittorrent']['port']
-        self.qbittorrent.username = cfg['qbittorrent']['username']
-        self.qbittorrent.password = cfg['qbittorrent']['password']
-        self.qbittorrent.download_dir = cfg['qbittorrent']['download_dir']
-        self.qbittorrent.db_path = cfg['qbittorrent']['db_path']
 
-        self.nocron.token = cfg['nocronbot']['token']
+class QbittorrentConfig:
+    def __init__(self, cfg):
+        self.host = cfg.get('host', '127.0.0.1')
+        self.port = cfg.get('port', 8080)
+        self.username = os.environ.get('QB_USERNAME', cfg.get('username', 'admin'))
+        self.password = os.environ.get('QB_PASSWORD', cfg.get('password', 'adminadmin'))
+        self.download_dir = cfg.get('download_dir', '/downloads/TV Shows')
+        self.incomplete_dir = cfg.get('incomplete_dir', '')
 
-        self.renamer.root_dir = cfg['renamer']['root_dir']
-        self.renamer.anilibria.regex = cfg['renamer']['anilibria']['regex']
 
-        self.anilibria.torrent_mirror = cfg['anilibria']['torrent_mirrors'][0]
-        self.anilibria.api_mirror = cfg['anilibria']['api_mirrors'][0]
-        self.anilibria.db_path = cfg['anilibria']['db_path']
+class AnilibriaConfig:
+    def __init__(self, cfg):
+        self.torrent_mirror = cfg.get('torrent_mirrors', ['https://www.anilibria.tv'])[0]
+        self.api_mirror = cfg.get('api_mirrors', ['https://api.anilibria.tv'])[0]
+        self.db_path = cfg.get('db_path', '/storage/anilibria.json')
 
-        self.lostfilm.torrent_mirror = cfg['lostfilm']['torrent_mirrors'][0]
-        self.lostfilm.lf_session = cfg['lostfilm']['lf_session']
-        self.lostfilm.db_path = cfg['lostfilm']['db_path']
+
+class LostfilmConfig:
+    def __init__(self, cfg):
+        self.lf_session = os.environ.get('LF_SESSION', cfg.get('lf_session', ''))
+        self.torrent_mirror = cfg.get('torrent_mirrors', ['https://www.lostfilm.tv'])[0]
+        self.db_path = cfg.get('db_path', '/storage/lostfilm.json')
+
+
+class RenamerConfig:
+    def __init__(self, cfg):
+        self.root_dir = cfg.get('root_dir', '/library')
+        anilibria = cfg.get('anilibria', {})
+        self.anilibria_regex = anilibria.get('regex', '')
+
+
+class NocronConfig:
+    def __init__(self, cfg):
+        self.token = os.environ.get('TG_BOT_TOKEN', cfg.get('token', ''))
+
+
+class Config:
+    def __init__(self, cfg):
+        global_cfg = cfg.get('global', {})
+        self.sleep_interval = global_cfg.get('interval', 60)
+        self.proxy = ProxyConfig(global_cfg.get('proxy', {}))
+        self.qbittorrent = QbittorrentConfig(cfg.get('qbittorrent', {}))
+        self.anilibria = AnilibriaConfig(cfg.get('anilibria', {}))
+        self.lostfilm = LostfilmConfig(cfg.get('lostfilm', {}))
+        self.renamer = RenamerConfig(cfg.get('renamer', {}))
+        self.nocron = NocronConfig(cfg.get('nocronbot', {}))
 
 
 def from_file(path):
     with open(path) as f:
-        cfgd = yaml.load(f, Loader=yaml.FullLoader)
-    return Config(cfgd)
+        cfg = yaml.safe_load(f)
+    return Config(cfg)

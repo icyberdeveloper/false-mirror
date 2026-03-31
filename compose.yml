@@ -1,4 +1,3 @@
----
 services:
   qbittorrent:
     image: lscr.io/linuxserver/qbittorrent:latest
@@ -13,30 +12,43 @@ services:
       - /storage/qbittorrent:/config
       - /mnt/library:/downloads
       - /mnt/tmp:/incomplete
-    network_mode: "host"
+    network_mode: host
     restart: unless-stopped
 
   false-mirror:
-    platform: linux/x86_64
-    image: icyberdeveloper/false-mirror:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: false-mirror
+    environment:
+      - LF_SESSION=9277a695061f92112a9671814ecf230b.2214896
+      - TG_BOT_TOKEN=6934685680:AAF1uNpBNVya6ljNFrxahUsli4ZezRstZYo
+      - HEALTHCHECK_TG_CHAT_ID=197650166
     volumes:
       - /storage:/storage
       - /mnt/library:/library
-    network_mode: "host"
+      - /mnt/tmp:/incomplete
+    network_mode: host
     restart: unless-stopped
     depends_on:
       qbittorrent:
         condition: service_started
 
-  nocron:
-    platform: linux/x86_64
-    image: icyberdeveloper/nocron:latest
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile.bot
     container_name: nocron
+    environment:
+      - TG_BOT_TOKEN=6934685680:AAF1uNpBNVya6ljNFrxahUsli4ZezRstZYo
+      - LF_SESSION=9277a695061f92112a9671814ecf230b.2214896
+      - HEALTHCHECK_TG_CHAT_ID=197650166
     volumes:
       - /storage:/storage
-    network_mode: "host"
+      - /mnt/library:/library
+      - /mnt/tmp:/incomplete
+    network_mode: host
     restart: unless-stopped
     depends_on:
-      false-mirror:
+      qbittorrent:
         condition: service_started

@@ -7,44 +7,34 @@ logger = logging.getLogger(__name__)
 
 
 class Renamer:
-    def __init__(self, dir, anilibria_regex):
-        self.dir = dir
+    def __init__(self, root_dir, anilibria_regex):
+        self.root_dir = root_dir
         self.anilibria_regex = anilibria_regex
 
     def rename(self):
-        logger.info('Start walking from: ' + self.dir)
-        for address, dirs, files in os.walk(self.dir):
-            logger.info('Look inside folder: ' + address)
+        if not self.anilibria_regex:
+            return
+        logger.info(f'Renamer walking: {self.root_dir}')
+        for dirpath, dirs, files in os.walk(self.root_dir):
             for filename in files:
-                logger.info('Found file: ' + address)
-                match_result = re.match(self.anilibria_regex, filename)
-                if match_result:
-                    abs_path = os.path.join(address, filename)
-                    logger.info('Match file to rename: {}'.format(abs_path))
+                match = re.match(self.anilibria_regex, filename)
+                if match:
+                    old_path = os.path.join(dirpath, filename)
+                    new_filename = self._build_new_filename(match)
+                    new_path = os.path.join(dirpath, new_filename)
+                    logger.info(f'Renaming: {filename} -> {new_filename}')
+                    os.rename(old_path, new_path)
 
-                    new_filename = self.get_new_filename(match_result)
-                    new_abs_path = os.path.join(address, new_filename)
-
-                    os.rename(abs_path, new_abs_path)
-                    logger.info('Successful rename file, new name is: {}'.format(new_abs_path))
-
-    def get_new_filename(self, match_result):
-        name, s, e = self.extract_data(match_result)
-        new_filename = name + ' - s' + s + 'e' + e + '.mkv'
-        return new_filename
-
-    @staticmethod
-    def extract_data(match_result):
-        name = match_result.group('name')
-        episode = match_result.group('episode')
+    def _build_new_filename(self, match):
+        name = match.group('name')
+        episode = match.group('episode')
         season = 1
 
-        season_match = re.match('(?P<name>.*)(S(?P<season>[0-9]{1}))$', name)
+        season_match = re.match(r'(?P<name>.+)S(?P<season>\d+)$', name)
         if season_match:
             season = int(season_match.group('season'))
             name = season_match.group('name')
 
-        season = '0' + str(season) if season < 10 else str(season)
-        name = name.replace('_', ' ')
-
-        return name, season, episode
+        name = name.replace('_', ' ').strip()
+        season_str = f'{season:02d}'
+        return f'{name} - s{season_str}e{episode}.mkv'

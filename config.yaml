@@ -1,10 +1,9 @@
 global:
-  interval: 60 # minutes
+  interval: 60  # minutes
   proxy:
-    enabled: true
+    enabled: false
     host: '127.0.0.1'
     port: 1080
-
 
 qbittorrent:
   host: '127.0.0.1'
@@ -12,8 +11,7 @@ qbittorrent:
   username: 'admin'
   password: 'adminadmin'
   download_dir: '/downloads/TV Shows'
-  db_path: '/storage/qbittorrent.json'
-
+  incomplete_dir: '/incomplete'
 
 anilibria:
   torrent_mirrors:
@@ -22,22 +20,16 @@ anilibria:
     - 'https://api.anilibria.tv'
   db_path: '/storage/anilibria.json'
 
-
 lostfilm:
-  lf_session: "9277a695061f92112a9671814ecf230b.2214896"
+  lf_session: ''  # set via LF_SESSION env var
   torrent_mirrors:
     - 'https://www.lostfilm.tv'
   db_path: '/storage/lostfilm.json'
-
 
 renamer:
   root_dir: '/library'
   anilibria:
     regex: '(?P<name>\w+)_\[(?P<episode>\d{2})]_\[\w+]_\[\w+]\.mkv'
 
-
 nocronbot:
-  token: '6934685680:AAF1uNpBNVya6ljNFrxahUsli4ZezRstZYo'
-
-thetvdb:
-  api_key: '62ec625e-c313-4276-aebb-a847002a07fc'
+  token: ''  # set via TG_BOT_TOKEN env var
