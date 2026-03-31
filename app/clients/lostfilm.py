@@ -43,13 +43,13 @@ def get_series(library, qbittorrent, download_dir, torrent_mirror, lf_session, c
 
                 try:
                     redirect_url = _get_redirect_url(torrent_mirror, series_id, lf_session, proxies)
-
-                    # HD version (1080p preferred)
-                    torrent_url = _get_torrent_url(redirect_url, proxies)
-                    if not torrent_url:
-                        logger.warning(f'LostFilm: no torrent link for {code} S{season_str}E{episode_str}')
+                    links = _parse_torrent_links(redirect_url, proxies)
+                    if not links:
+                        logger.warning(f'LostFilm: no torrent links for {code} S{season_str}E{episode_str}')
                         continue
 
+                    # HD version (1080p preferred)
+                    torrent_url = _pick_best_quality(links)
                     download_path = f'{download_dir}/{ru_name} ({release_year})/Season {season_str}'
                     label = f'{ru_name} S{season_str}E{episode_str}'
                     qbittorrent.download_torrent(torrent_url, download_path, proxies, tracker=tracker, label=label)
@@ -58,11 +58,16 @@ def get_series(library, qbittorrent, download_dir, torrent_mirror, lf_session, c
 
                     # SD version for Telegram (lowest quality)
                     if mobile_dir:
-                        sd_url = _get_torrent_url_lowest(redirect_url, proxies)
+                        sd_url = _pick_lowest_quality(links)
                         if sd_url and sd_url != torrent_url:
                             sd_path = f'{mobile_dir}/{ru_name} ({release_year})/Season {season_str}'
                             qbittorrent.download_torrent(sd_url, sd_path, proxies)
                             logger.info(f'LostFilm: queued SD {ru_name} S{season_str}E{episode_str}')
+                        elif sd_url:
+                            # Only one quality available — download it for mobile too
+                            sd_path = f'{mobile_dir}/{ru_name} ({release_year})/Season {season_str}'
+                            qbittorrent.download_torrent(sd_url, sd_path, proxies)
+                            logger.info(f'LostFilm: queued SD (same quality) {ru_name} S{season_str}E{episode_str}')
 
                 except Exception as e:
                     logger.error(f'LostFilm: error processing {code} S{season_str}E{episode_str}: {e}')
@@ -103,11 +108,12 @@ def get_movie(qbittorrent, movies_dir, torrent_mirror, lf_session, code, proxies
         return []
 
     redirect_url = _get_redirect_url(torrent_mirror, series_id, lf_session, proxies)
-    torrent_url = _get_torrent_url(redirect_url, proxies)
-    if not torrent_url:
-        logger.warning(f'LostFilm movie: no torrent link for {code}')
+    links = _parse_torrent_links(redirect_url, proxies)
+    if not links:
+        logger.warning(f'LostFilm movie: no torrent links for {code}')
         return []
 
+    torrent_url = _pick_best_quality(links)
     folder = f'{ru_name} ({release_year})' if release_year else ru_name
     download_path = f'{movies_dir}/{folder}'
     label = f'{ru_name} ({release_year})' if release_year else ru_name
@@ -156,66 +162,50 @@ def _get_redirect_url(torrent_mirror, series_id, lf_session, proxies):
     return redirect
 
 
-def _get_torrent_url(redirect_url, proxies, quality_prefs=None):
+def _parse_torrent_links(redirect_url, proxies):
+    """Parse all torrent download links from quality selection page.
+    Returns list of (label, url) sorted by quality: SD first, then 720p, then 1080p."""
     if not redirect_url:
-        return None
-    if quality_prefs is None:
-        quality_prefs = ['1080p', '720p', 'HDTVRip', 'MP4', 'SD']
-    res = network.get(redirect_url, proxies=proxies)
+        return []
+    try:
+        res = network.get(redirect_url, proxies=proxies)
+    except Exception as e:
+        logger.warning(f'LostFilm: failed to fetch quality page: {e}')
+        return []
+
     soup = BeautifulSoup(res.text, 'html.parser')
+    links = []
+    for a in soup.find_all('a', href=True):
+        href = a['href']
+        text = a.get_text().strip()
+        # Only torrent download links (tracktor.site), skip external sites
+        if 'tracktor' not in href:
+            continue
+        if not text:
+            continue
+        links.append((text, href))
 
-    for quality in quality_prefs:
-        link = soup.find(lambda tag, q=quality: (
-            tag.name == 'a'
-            and tag.has_attr('href')
-            and q in tag.text
-        ))
-        if link:
-            return link['href']
-
-    return None
+    return links
 
 
-def _get_torrent_url_lowest(redirect_url, proxies):
-    """Get the lowest quality torrent — WEB-DLRip/HDTVRip without 1080p/720p prefix."""
-    if not redirect_url:
-        return None
-    res = network.get(redirect_url, proxies=proxies)
-    soup = BeautifulSoup(res.text, 'html.parser')
+def _pick_best_quality(links):
+    """Pick highest quality: 1080p > 720p > SD."""
+    for pref in ['1080p', '720p']:
+        for text, href in links:
+            if pref in text:
+                return href
+    # Fallback: first available (SD/WEB-DLRip)
+    return links[0][1] if links else None
 
-    # Find all torrent links (exclude external sites like webtorrent/utorrent)
-    torrent_links = []
-    for link in soup.find_all('a', href=True):
-        text = link.get_text().strip()
-        href = link['href']
-        if 'tracktor' in href or 'torrent' in href.lower():
-            if 'Rip' in text or 'rip' in text:
-                torrent_links.append((text, href))
 
-    if not torrent_links:
-        return None
-
-    # Prefer the one WITHOUT 1080p/720p in label (that's the SD version)
-    for text, href in torrent_links:
+def _pick_lowest_quality(links):
+    """Pick lowest quality: SD/WEB-DLRip (no 1080p/720p in label) > 720p > 1080p."""
+    # Prefer link without 1080p/720p — that's the SD version
+    for text, href in links:
         if '1080' not in text and '720' not in text:
             return href
-
-    # Fallback to last (usually lowest quality)
-    return torrent_links[-1][1]
-
-
-def _get_all_torrent_urls(redirect_url, proxies):
-    """Return dict of {quality_label: url} for all available qualities."""
-    if not redirect_url:
-        return {}
-    res = network.get(redirect_url, proxies=proxies)
-    soup = BeautifulSoup(res.text, 'html.parser')
-    result = {}
-    for link in soup.find_all('a', href=True):
-        text = link.get_text().strip()
-        if link['href'].startswith('http') and text:
-            result[text] = link['href']
-    return result
+    # Fallback: 720p > 1080p (take last = lowest)
+    return links[-1][1] if links else None
 
 
 def _get_season_number(series_id):
