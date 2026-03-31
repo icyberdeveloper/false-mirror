@@ -52,8 +52,7 @@ class Bot:
 
         if lf_movie:
             code = lf_movie.group(1)
-            self.db.save_new_movie_code(code)
-            await update.message.reply_text(f'Added LostFilm movie: {code}\nЗапускаю проверку...')
+            await update.message.reply_text(f'LostFilm movie: {code}\nСкачиваю...')
             threading.Thread(
                 target=self._check_and_reply,
                 args=(update.effective_chat.id, 'lostfilm_movie', code),
@@ -86,8 +85,6 @@ class Bot:
     async def cmd_list(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         lf_codes = self.db.get_lostfilm_codes()
         al_codes = self.db.get_anilibria_codes()
-        mv_codes = self.db.get_movie_codes()
-
         lines = []
         if lf_codes:
             lines.append('LostFilm:')
@@ -97,11 +94,6 @@ class Bot:
             lines.append('Anilibria:')
             for item in al_codes:
                 lines.append(f'  - {item["code"]}')
-        if mv_codes:
-            lines.append('Movies:')
-            for item in mv_codes:
-                lines.append(f'  - {item["code"]}')
-
         if not lines:
             await update.message.reply_text('No tracked shows.')
         else:
