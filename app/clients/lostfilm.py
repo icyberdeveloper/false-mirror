@@ -58,7 +58,7 @@ def get_series(library, qbittorrent, download_dir, torrent_mirror, lf_session, c
 
                     # SD version for Telegram (lowest quality)
                     if mobile_dir:
-                        sd_url = _get_torrent_url(redirect_url, proxies, quality_prefs=['MP4', 'SD', 'HDTVRip', '720p'])
+                        sd_url = _get_torrent_url_lowest(redirect_url, proxies)
                         if sd_url and sd_url != torrent_url:
                             sd_path = f'{mobile_dir}/{ru_name} ({release_year})/Season {season_str}'
                             qbittorrent.download_torrent(sd_url, sd_path, proxies)
@@ -174,6 +174,34 @@ def _get_torrent_url(redirect_url, proxies, quality_prefs=None):
             return link['href']
 
     return None
+
+
+def _get_torrent_url_lowest(redirect_url, proxies):
+    """Get the lowest quality torrent — WEB-DLRip/HDTVRip without 1080p/720p prefix."""
+    if not redirect_url:
+        return None
+    res = network.get(redirect_url, proxies=proxies)
+    soup = BeautifulSoup(res.text, 'html.parser')
+
+    # Find all torrent links (exclude external sites like webtorrent/utorrent)
+    torrent_links = []
+    for link in soup.find_all('a', href=True):
+        text = link.get_text().strip()
+        href = link['href']
+        if 'tracktor' in href or 'torrent' in href.lower():
+            if 'Rip' in text or 'rip' in text:
+                torrent_links.append((text, href))
+
+    if not torrent_links:
+        return None
+
+    # Prefer the one WITHOUT 1080p/720p in label (that's the SD version)
+    for text, href in torrent_links:
+        if '1080' not in text and '720' not in text:
+            return href
+
+    # Fallback to last (usually lowest quality)
+    return torrent_links[-1][1]
 
 
 def _get_all_torrent_urls(redirect_url, proxies):
