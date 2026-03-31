@@ -82,6 +82,24 @@ false-mirror/
 
 **Post-download verification:** Tracker monitors qBittorrent state per torrent. On completion, verifies the file exists on NAS. Alerts via Telegram on problems (stalled downloads, missing files, errors).
 
+## Docker Images
+
+All images are hosted on Docker Hub and built by CI on every push to main:
+
+| Image | Description |
+|---|---|
+| `icyberdeveloper/false-mirror` | Scheduler (periodic episode checks) |
+| `icyberdeveloper/nocron` | Telegram bot |
+| `icyberdeveloper/qbittorrent` | Mirror of linuxserver/qbittorrent (pinned version) |
+
+Images are tagged with `latest` and git SHA for version tracking.
+
+```bash
+cd deploy
+docker-compose pull && docker-compose up -d   # Update from registry
+docker-compose up -d --build                   # Build locally (development)
+```
+
 ## Configuration
 
 Application config is in `config.yaml`. Secrets are set via environment variables in `deploy/compose.yml`.

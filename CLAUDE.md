@@ -133,7 +133,12 @@ No test suite or linter is configured.
 
 ### CI
 
-GitHub Actions on push to main: builds two Docker images (`icyberdeveloper/false-mirror`, `icyberdeveloper/nocron`) and pushes to Docker Hub via Buildx. compose.yml has both `image:` (for pulling from registry) and `build:` (for local development).
+GitHub Actions on push to main: builds and pushes to Docker Hub via Buildx:
+- `icyberdeveloper/false-mirror:latest` + `:<sha>` — scheduler
+- `icyberdeveloper/nocron:latest` + `:<sha>` — bot
+- `icyberdeveloper/qbittorrent:<version>` — mirror from linuxserver (pinned, update `QBITTORRENT_VERSION` in CI + tag in compose.yml)
+
+compose.yml has both `image:` (pull from registry) and `build:` (local development).
 
 ### Architecture
 
