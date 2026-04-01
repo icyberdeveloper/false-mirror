@@ -248,12 +248,27 @@ class Bot:
 
             await query.edit_message_text(f'⏳ Отправляю {filename} ({size_str})...')
 
+            # Get video dimensions for correct Telegram preview
+            width, height = 0, 0
+            if ext in {'.mkv', '.mp4', '.m4v', '.ts'}:
+                import subprocess
+                probe = subprocess.run(
+                    ['ffprobe', '-v', 'error', '-select_streams', 'v:0',
+                     '-show_entries', 'stream=width,height', '-of', 'csv=p=0', send_path],
+                    capture_output=True, text=True, timeout=10,
+                )
+                parts = probe.stdout.strip().split(',')
+                if len(parts) == 2:
+                    width, height = int(parts[0]), int(parts[1])
+
             with open(send_path, 'rb') as f:
                 if ext in {'.mkv', '.mp4', '.m4v', '.ts'}:
                     await query.get_bot().send_video(
                         chat_id=chat_id,
                         video=f,
                         filename=filename,
+                        width=width or None,
+                        height=height or None,
                         supports_streaming=True,
                         read_timeout=600,
                         write_timeout=600,
