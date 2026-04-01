@@ -56,11 +56,11 @@ def get_series(library, qbittorrent, download_dir, torrent_mirror, lf_session, c
                     added.append(label)
                     logger.info(f'LostFilm: queued {ru_name} S{season_str}E{episode_str}')
 
-                    # SD version for Telegram (lowest quality, same folder)
-                    sd_url = _pick_lowest_quality(links)
-                    if sd_url and sd_url != torrent_url:
-                        qbittorrent.download_torrent(sd_url, download_path, proxies)
-                        logger.info(f'LostFilm: queued SD {ru_name} S{season_str}E{episode_str}')
+                    # 720p version for Telegram bot (H.264 MP4, plays inline)
+                    mid_url = _pick_720p(links)
+                    if mid_url and mid_url != torrent_url:
+                        qbittorrent.download_torrent(mid_url, download_path, proxies)
+                        logger.info(f'LostFilm: queued 720p {ru_name} S{season_str}E{episode_str}')
 
                 except Exception as e:
                     logger.error(f'LostFilm: error processing {code} S{season_str}E{episode_str}: {e}')
@@ -191,14 +191,16 @@ def _pick_best_quality(links):
     return links[0][1] if links else None
 
 
-def _pick_lowest_quality(links):
-    """Pick lowest quality: SD/WEB-DLRip (no 1080p/720p in label) > 720p > 1080p."""
-    # Prefer link without 1080p/720p — that's the SD version
+def _pick_720p(links):
+    """Pick 720p for Telegram bot. Fallback to SD if no 720p available."""
+    for text, href in links:
+        if '720' in text:
+            return href
+    # Fallback: SD (no 1080p/720p in label)
     for text, href in links:
         if '1080' not in text and '720' not in text:
             return href
-    # Fallback: 720p > 1080p (take last = lowest)
-    return links[-1][1] if links else None
+    return None
 
 
 def _get_season_number(series_id):
