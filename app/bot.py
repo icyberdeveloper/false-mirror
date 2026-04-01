@@ -280,12 +280,53 @@ class Bot:
                 else:
                     logger.warning(f'Re-encode failed: {result.stderr[-300:]}')
 
-            # Check final size
+            # If still too big — re-encode to fit under 2GB
             size = os.path.getsize(send_path)
             if size > MAX_FILE_SIZE:
-                size_gb = size / (1024**3)
-                await query.edit_message_text(f'❌ Файл слишком большой: {size_gb:.1f}GB (лимит 2GB)')
-                return
+                await query.edit_message_text(f'🔄 Файл {size / (1024**3):.1f}GB — сжимаю до 2GB...')
+                # Get duration to calculate target bitrate
+                dur_probe = subprocess.run(
+                    ['ffprobe', '-v', 'error', '-show_entries', 'format=duration',
+                     '-of', 'csv=p=0', abs_path],
+                    capture_output=True, text=True, timeout=10,
+                )
+                duration = float(dur_probe.stdout.strip() or '3600')
+                # Target: 1.9GB to leave margin, in kbps
+                target_bitrate = int((1.9 * 1024 * 1024 * 8) / duration)
+
+                if tmp_path and os.path.isfile(tmp_path):
+                    os.remove(tmp_path)
+                tmp_path = tempfile.mktemp(suffix='.mp4', dir='/tmp')
+                result = subprocess.run(
+                    ['ffmpeg', '-y', '-i', abs_path,
+                     '-c:v', 'libx264', '-preset', 'fast',
+                     '-b:v', f'{target_bitrate}k', '-maxrate', f'{target_bitrate}k',
+                     '-bufsize', f'{target_bitrate * 2}k',
+                     '-vf', 'scale=-2:720',
+                     '-c:a', 'aac', '-b:a', '192k',
+                     '-movflags', '+faststart',
+                     '-max_muxing_queue_size', '1024',
+                     tmp_path],
+                    capture_output=True, timeout=3600,
+                )
+                if result.returncode == 0 and os.path.isfile(tmp_path):
+                    send_path = tmp_path
+                    filename = os.path.splitext(os.path.basename(abs_path))[0] + '.mp4'
+                    # Re-probe dimensions
+                    p3 = subprocess.run(
+                        ['ffprobe', '-v', 'error', '-select_streams', 'v:0',
+                         '-show_entries', 'stream=width,height', '-of', 'csv=p=0', tmp_path],
+                        capture_output=True, text=True, timeout=10,
+                    )
+                    parts3 = p3.stdout.strip().split(',')
+                    if len(parts3) == 2:
+                        width, height = int(parts3[0]), int(parts3[1])
+                else:
+                    logger.error(f'Compression failed: {result.stderr[-300:]}')
+                    await query.edit_message_text('❌ Не удалось сжать файл')
+                    return
+
+            size = os.path.getsize(send_path)
 
             size_str = f'{size / (1024**3):.1f}GB' if size >= 1024**3 else f'{size / (1024**2):.0f}MB'
             await query.edit_message_text(f'⏳ Отправляю {filename} ({size_str})...')
