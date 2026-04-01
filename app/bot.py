@@ -250,7 +250,7 @@ class Bot:
 
             # Get video dimensions for correct Telegram preview
             width, height = 0, 0
-            if ext in {'.mkv', '.mp4', '.m4v', '.ts'}:
+            if ext in VIDEO_EXTENSIONS:
                 import subprocess
                 probe = subprocess.run(
                     ['ffprobe', '-v', 'error', '-select_streams', 'v:0',
@@ -262,7 +262,7 @@ class Bot:
                     width, height = int(parts[0]), int(parts[1])
 
             with open(send_path, 'rb') as f:
-                if ext in {'.mkv', '.mp4', '.m4v', '.ts'}:
+                if ext in VIDEO_EXTENSIONS:
                     await query.get_bot().send_video(
                         chat_id=chat_id,
                         video=f,
