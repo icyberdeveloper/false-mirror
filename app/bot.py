@@ -208,7 +208,7 @@ class Bot:
         )
 
     async def _send_file(self, query, abs_path):
-        """Send a video file from NAS."""
+        """Send a video file from NAS. Remux to MP4 if needed for Telegram playback."""
         if not os.path.isfile(abs_path):
             await query.edit_message_text('Файл не найден.')
             return
@@ -221,13 +221,35 @@ class Bot:
 
         filename = os.path.basename(abs_path)
         size_str = f'{size / (1024**3):.1f}GB' if size >= 1024**3 else f'{size / (1024**2):.0f}MB'
-
-        await query.edit_message_text(f'⏳ Отправляю {filename} ({size_str})...')
+        ext = os.path.splitext(abs_path)[1].lower()
+        send_path = abs_path
+        tmp_path = None
 
         try:
             chat_id = query.message.chat_id
-            ext = os.path.splitext(abs_path)[1].lower()
-            with open(abs_path, 'rb') as f:
+
+            # Remux non-MP4 video to MP4 for Telegram inline playback
+            if ext in {'.mkv', '.avi', '.ts', '.m4v'}:
+                import subprocess
+                import tempfile
+                await query.edit_message_text(f'🔄 Конвертирую {filename} в MP4...')
+                tmp_path = tempfile.mktemp(suffix='.mp4', dir='/tmp')
+                result = subprocess.run(
+                    ['ffmpeg', '-i', abs_path, '-c', 'copy', '-movflags', '+faststart', tmp_path],
+                    capture_output=True, timeout=300,
+                )
+                if result.returncode == 0 and os.path.isfile(tmp_path):
+                    send_path = tmp_path
+                    filename = os.path.splitext(filename)[0] + '.mp4'
+                    size = os.path.getsize(tmp_path)
+                    size_str = f'{size / (1024**3):.1f}GB' if size >= 1024**3 else f'{size / (1024**2):.0f}MB'
+                else:
+                    logger.warning(f'ffmpeg remux failed: {result.stderr[:200]}')
+                    # Fall back to sending as-is
+
+            await query.edit_message_text(f'⏳ Отправляю {filename} ({size_str})...')
+
+            with open(send_path, 'rb') as f:
                 if ext in {'.mkv', '.mp4', '.avi', '.m4v', '.ts'}:
                     await query.get_bot().send_video(
                         chat_id=chat_id,
@@ -249,9 +271,12 @@ class Bot:
                     )
             await query.get_bot().send_message(chat_id=chat_id, text=f'✅ {filename}')
         except Exception as e:
-            logger.error(f'Failed to send file {full_path}: {e}')
+            logger.error(f'Failed to send file {abs_path}: {e}')
             chat_id = query.message.chat_id
             await query.get_bot().send_message(chat_id=chat_id, text=f'❌ Ошибка отправки: {e}')
+        finally:
+            if tmp_path and os.path.isfile(tmp_path):
+                os.remove(tmp_path)
 
     # --- Background check helper ---
 
