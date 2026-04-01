@@ -208,19 +208,15 @@ class Bot:
         )
 
     async def _send_file(self, query, abs_path):
-        """Send a video file from NAS. Remux MKV→MP4 if needed (H.264 only, no re-encoding)."""
+        """Send a video file from NAS. Convert to Telegram-compatible MP4 H.264 if needed."""
+        import subprocess
+        import tempfile
+
         if not os.path.isfile(abs_path):
             await query.edit_message_text('Файл не найден.')
             return
 
-        size = os.path.getsize(abs_path)
-        if size > MAX_FILE_SIZE:
-            size_gb = size / (1024**3)
-            await query.edit_message_text(f'❌ Файл слишком большой: {size_gb:.1f}GB (лимит 2GB)')
-            return
-
         filename = os.path.basename(abs_path)
-        size_str = f'{size / (1024**3):.1f}GB' if size >= 1024**3 else f'{size / (1024**2):.0f}MB'
         ext = os.path.splitext(abs_path)[1].lower()
         send_path = abs_path
         tmp_path = None
@@ -228,11 +224,23 @@ class Bot:
         try:
             chat_id = query.message.chat_id
 
-            # Remux MKV/TS to MP4 if H.264 (instant, no re-encoding)
-            if ext in {'.mkv', '.ts', '.m4v'}:
-                import subprocess
-                import tempfile
-                await query.edit_message_text(f'🔄 Ремукс {filename} → MP4...')
+            # Probe video: codec, width, height
+            probe = subprocess.run(
+                ['ffprobe', '-v', 'error', '-select_streams', 'v:0',
+                 '-show_entries', 'stream=codec_name,width,height', '-of', 'csv=p=0', abs_path],
+                capture_output=True, text=True, timeout=10,
+            )
+            parts = probe.stdout.strip().split(',')
+            video_codec = parts[0] if len(parts) >= 1 else ''
+            width = int(parts[1]) if len(parts) >= 2 else 0
+            height = int(parts[2]) if len(parts) >= 3 else 0
+
+            needs_remux = ext in {'.mkv', '.ts', '.m4v'} and video_codec in ('h264', 'hevc')
+            needs_reencode = ext in VIDEO_EXTENSIONS and video_codec not in ('h264', 'hevc')
+
+            if needs_remux:
+                # Fast remux — copy codec, change container to MP4 (instant)
+                await query.edit_message_text(f'🔄 Ремукс → MP4...')
                 tmp_path = tempfile.mktemp(suffix='.mp4', dir='/tmp')
                 result = subprocess.run(
                     ['ffmpeg', '-y', '-i', abs_path, '-c', 'copy', '-movflags', '+faststart', tmp_path],
@@ -241,48 +249,59 @@ class Bot:
                 if result.returncode == 0 and os.path.isfile(tmp_path):
                     send_path = tmp_path
                     filename = os.path.splitext(filename)[0] + '.mp4'
-                    size = os.path.getsize(tmp_path)
-                    size_str = f'{size / (1024**3):.1f}GB' if size >= 1024**3 else f'{size / (1024**2):.0f}MB'
                 else:
-                    logger.warning(f'ffmpeg remux failed, sending as-is: {result.stderr[-200:]}')
+                    logger.warning(f'Remux failed: {result.stderr[-200:]}')
 
+            elif needs_reencode:
+                # Re-encode to H.264 MP4 preserving aspect ratio
+                await query.edit_message_text(f'🔄 Конвертирую в H.264 MP4...')
+                tmp_path = tempfile.mktemp(suffix='.mp4', dir='/tmp')
+                result = subprocess.run(
+                    ['ffmpeg', '-y', '-i', abs_path,
+                     '-c:v', 'libx264', '-preset', 'fast', '-crf', '23',
+                     '-c:a', 'aac', '-b:a', '192k',
+                     '-movflags', '+faststart',
+                     '-max_muxing_queue_size', '1024',
+                     tmp_path],
+                    capture_output=True, timeout=1800,
+                )
+                if result.returncode == 0 and os.path.isfile(tmp_path):
+                    send_path = tmp_path
+                    filename = os.path.splitext(filename)[0] + '.mp4'
+                    # Re-probe converted file for correct dimensions
+                    probe2 = subprocess.run(
+                        ['ffprobe', '-v', 'error', '-select_streams', 'v:0',
+                         '-show_entries', 'stream=width,height', '-of', 'csv=p=0', tmp_path],
+                        capture_output=True, text=True, timeout=10,
+                    )
+                    p2 = probe2.stdout.strip().split(',')
+                    if len(p2) == 2:
+                        width, height = int(p2[0]), int(p2[1])
+                else:
+                    logger.warning(f'Re-encode failed: {result.stderr[-300:]}')
+
+            # Check final size
+            size = os.path.getsize(send_path)
+            if size > MAX_FILE_SIZE:
+                size_gb = size / (1024**3)
+                await query.edit_message_text(f'❌ Файл слишком большой: {size_gb:.1f}GB (лимит 2GB)')
+                return
+
+            size_str = f'{size / (1024**3):.1f}GB' if size >= 1024**3 else f'{size / (1024**2):.0f}MB'
             await query.edit_message_text(f'⏳ Отправляю {filename} ({size_str})...')
 
-            # Get video dimensions for correct Telegram preview
-            width, height = 0, 0
-            if ext in VIDEO_EXTENSIONS:
-                import subprocess
-                probe = subprocess.run(
-                    ['ffprobe', '-v', 'error', '-select_streams', 'v:0',
-                     '-show_entries', 'stream=width,height', '-of', 'csv=p=0', send_path],
-                    capture_output=True, text=True, timeout=10,
-                )
-                parts = probe.stdout.strip().split(',')
-                if len(parts) == 2:
-                    width, height = int(parts[0]), int(parts[1])
-
             with open(send_path, 'rb') as f:
-                if ext in VIDEO_EXTENSIONS:
-                    await query.get_bot().send_video(
-                        chat_id=chat_id,
-                        video=f,
-                        filename=filename,
-                        width=width or None,
-                        height=height or None,
-                        supports_streaming=True,
-                        read_timeout=600,
-                        write_timeout=600,
-                        connect_timeout=60,
-                    )
-                else:
-                    await query.get_bot().send_document(
-                        chat_id=chat_id,
-                        document=f,
-                        filename=filename,
-                        read_timeout=600,
-                        write_timeout=600,
-                        connect_timeout=60,
-                    )
+                await query.get_bot().send_video(
+                    chat_id=chat_id,
+                    video=f,
+                    filename=filename,
+                    width=width or None,
+                    height=height or None,
+                    supports_streaming=True,
+                    read_timeout=600,
+                    write_timeout=600,
+                    connect_timeout=60,
+                )
             await query.get_bot().send_message(chat_id=chat_id, text=f'✅ {filename}')
         except Exception as e:
             logger.error(f'Failed to send file {abs_path}: {e}')
