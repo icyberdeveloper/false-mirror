@@ -65,9 +65,9 @@ class Bot:
         url = args[0]
         logger.info(f'Download request: {url}')
 
-        lf_match = re.search(r'lostfilm\.\w+/series/([^/]+)', url)
-        lf_movie = re.search(r'lostfilm\.\w+/movies/([^/]+)', url)
-        al_match = re.search(r'anilibria\.\w+/release/([^/.]+)', url)
+        lf_match = re.search(r'lostfilm\.\w+/series/([^/?#]+)', url)
+        lf_movie = re.search(r'lostfilm\.\w+/movies/([^/?#]+)', url)
+        al_match = re.search(r'anilibria\.\w+/release/([^/.?#]+)', url)
 
         if lf_movie:
             code = lf_movie.group(1)
