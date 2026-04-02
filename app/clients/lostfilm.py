@@ -188,10 +188,16 @@ def _pick_best_quality(links):
 
 
 def _get_season_number(series_id):
+    if len(series_id) < 6 or not series_id.isdigit():
+        logger.warning(f'LostFilm: unexpected series_id format: {series_id}')
+        return '01'
     season = int(series_id[-6:-3])
     return f'{season:02d}'
 
 
 def _get_episode_number(series_id):
+    if len(series_id) < 3 or not series_id.isdigit():
+        logger.warning(f'LostFilm: unexpected series_id format: {series_id}')
+        return '01'
     episode = int(series_id[-3:])
     return f'{episode:02d}'

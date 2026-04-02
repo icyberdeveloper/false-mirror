@@ -41,7 +41,7 @@ class Tracker:
         })
         logger.info(f'Tracker: recording {label}')
 
-    def check(self, qbt_client, library_dir):
+    def check(self, qbt_client, library_dir, qbt_download_dir='/downloads', nas_library_dir='/library'):
         """Check all tracked downloads against qBittorrent state and NAS filesystem."""
         q = Query()
         active = self.db.search(q.status == 'downloading')
@@ -80,12 +80,8 @@ class Tracker:
             # Completed in qBittorrent?
             if states & COMPLETED_STATES and all(p >= 1.0 for p in progresses):
                 # Verify file exists on NAS
-                # save_path is like /downloads/TV Shows/Show/Season 03 or /downloads/Movies/Film
-                # NAS root is library_dir's parent (e.g. /library)
-                # Map /downloads/X/... → /library/X/...
-                relative = save_path.split('/downloads/', 1)[-1] if '/downloads/' in save_path else save_path
-                nas_root = os.path.dirname(library_dir)  # /library
-                nas_path = f'{nas_root}/{relative}'
+                # Map qBittorrent path → NAS path (e.g. /downloads/X → /library/X)
+                nas_path = save_path.replace(qbt_download_dir, nas_library_dir, 1)
 
                 if self._has_video_files(nas_path):
                     self._notify(f'✅ <b>{label}</b>\nСкачан и на NAS')

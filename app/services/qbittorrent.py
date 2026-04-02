@@ -1,7 +1,10 @@
 import re
+import time
 import logging
 from qbittorrent import Client
 from services import network
+
+INDEX_TTL = 30  # seconds before re-indexing
 
 
 logger = logging.getLogger(__name__)
@@ -20,6 +23,12 @@ class QBittorrent:
         self.client = Client(url)
         self.client.login(username=username, password=password)
         self._torrents_by_name = self._index_torrents()
+        self._index_time = time.monotonic()
+
+    def _ensure_fresh_index(self):
+        if time.monotonic() - self._index_time > INDEX_TTL:
+            self._torrents_by_name = self._index_torrents()
+            self._index_time = time.monotonic()
 
     def _index_torrents(self):
         """Build index: torrent name -> list of (hash, state, save_path, progress)."""
@@ -42,6 +51,8 @@ class QBittorrent:
 
     def episode_in_queue(self, show_code, season_num, episode_num):
         """Check if episode is already queued/downloading/seeding in qBittorrent."""
+        self._ensure_fresh_index()
+
         pattern = re.compile(
             rf'[Ss]{int(season_num):02d}[Ee]{int(episode_num):02d}',
         )

@@ -54,7 +54,11 @@ def run_maintenance():
         cfg, db, library, tracker, qbt = _load_env()
         renamer = Renamer(cfg.renamer.root_dir, cfg.renamer.anilibria_regex)
         renamer.rename()
-        tracker.check(qbt.client, cfg.renamer.root_dir + '/TV Shows')
+        tracker.check(
+            qbt.client, cfg.renamer.root_dir + '/TV Shows',
+            qbt_download_dir=cfg.qbittorrent.download_dir.rsplit('/', 1)[0],  # /downloads
+            nas_library_dir=cfg.renamer.root_dir,  # /library
+        )
     except Exception as e:
         logger.error(f'Maintenance failed: {e}')
 

@@ -16,8 +16,11 @@ log_format = '%(asctime)s [%(levelname)s] %(name)s - %(message)s'
 logging.basicConfig(level=logging.INFO, format=log_format)
 logging.getLogger('httpx').setLevel(logging.WARNING)
 
+from collections import OrderedDict
+
 LIBRARY_ROOT = '/library'
 VIDEO_EXTENSIONS = {'.mkv', '.avi', '.mp4', '.ts', '.m4v'}
+PATH_MAP_MAX_SIZE = 5000
 BROWSE_ROOTS = {
     'Сериалы': '/library/TV Shows',
     'Фильмы': '/library/Movies',
@@ -29,7 +32,7 @@ MAX_FILE_SIZE = 2 * 1024 * 1024 * 1024  # 2GB
 class Bot:
     def __init__(self, token, db, base_url=None):
         self.db = db
-        self._path_map = {}  # short_id → full path
+        self._path_map = OrderedDict()  # short_id → full path, bounded
         self._path_counter = 0
         builder = ApplicationBuilder().token(token)
         if base_url:
@@ -134,6 +137,8 @@ class Bot:
         self._path_counter += 1
         sid = str(self._path_counter)
         self._path_map[sid] = path
+        while len(self._path_map) > PATH_MAP_MAX_SIZE:
+            self._path_map.popitem(last=False)
         return sid
 
     # --- Callback handler ---

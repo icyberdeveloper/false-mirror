@@ -6,7 +6,7 @@ from retry import retry
 logger = logging.getLogger(__name__)
 
 
-@retry(requests.exceptions.ConnectionError, tries=5, delay=3, backoff=2, logger=logger)
+@retry((requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.ChunkedEncodingError), tries=5, delay=3, backoff=2, logger=logger)
 def get(url, cookies=None, proxies=None):
     res = requests.get(url, cookies=cookies, proxies=proxies, timeout=30)
     if res.status_code != 200:
