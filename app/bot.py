@@ -243,9 +243,10 @@ class Bot:
             needs_remux = ext in {'.mkv', '.ts', '.m4v'} and video_codec in ('h264', 'hevc')
             needs_reencode = ext in VIDEO_EXTENSIONS and video_codec not in ('h264', 'hevc')
 
+            await query.edit_message_text(f'⏳ Подготовка...')
+
             if needs_remux:
                 # Fast remux — copy codec, change container to MP4 (instant)
-                await query.edit_message_text(f'🔄 Ремукс → MP4...')
                 tmp_path = tempfile.mktemp(suffix='.mp4', dir='/tmp')
                 result = subprocess.run(
                     ['ffmpeg', '-y', '-i', abs_path, '-c', 'copy', '-movflags', '+faststart', tmp_path],
@@ -258,8 +259,6 @@ class Bot:
                     logger.warning(f'Remux failed: {result.stderr[-200:]}')
 
             elif needs_reencode:
-                # Re-encode to H.264 MP4 preserving aspect ratio
-                await query.edit_message_text(f'🔄 Конвертирую в H.264 MP4...')
                 tmp_path = tempfile.mktemp(suffix='.mp4', dir='/tmp')
                 result = subprocess.run(
                     ['ffmpeg', '-y', '-i', abs_path,
@@ -288,7 +287,6 @@ class Bot:
             # If still too big — re-encode to fit under 2GB
             size = os.path.getsize(send_path)
             if size > MAX_FILE_SIZE:
-                await query.edit_message_text(f'🔄 Файл {size / (1024**3):.1f}GB — сжимаю до 2GB...')
                 # Get duration to calculate target bitrate
                 dur_probe = subprocess.run(
                     ['ffprobe', '-v', 'error', '-show_entries', 'format=duration',
@@ -333,9 +331,6 @@ class Bot:
 
             size = os.path.getsize(send_path)
 
-            size_str = f'{size / (1024**3):.1f}GB' if size >= 1024**3 else f'{size / (1024**2):.0f}MB'
-            await query.edit_message_text(f'⏳ Отправляю {filename} ({size_str})...')
-
             with open(send_path, 'rb') as f:
                 await query.get_bot().send_video(
                     chat_id=chat_id,
@@ -348,7 +343,11 @@ class Bot:
                     write_timeout=600,
                     connect_timeout=60,
                 )
-            await query.get_bot().send_message(chat_id=chat_id, text=f'✅ {filename}')
+            # Delete "Подготовка..." message after video is sent
+            try:
+                await query.message.delete()
+            except Exception:
+                pass
         except Exception as e:
             logger.error(f'Failed to send file {abs_path}: {e}')
             chat_id = query.message.chat_id
@@ -360,34 +359,27 @@ class Bot:
     # --- Background check helper ---
 
     def _check_and_reply(self, chat_id, provider, code):
-        """Run check in background thread and send result to Telegram."""
-        import requests
+        """Run check in background thread. Only notify on errors."""
         try:
             if provider == 'lostfilm':
-                added = check_lostfilm_show(code)
+                check_lostfilm_show(code)
             elif provider == 'lostfilm_movie':
-                added = check_lostfilm_movie(code)
+                check_lostfilm_movie(code)
             else:
-                added = check_anilibria_show(code)
-
-            if added:
-                msg = f'✅ {code}: добавлено {len(added)} эпизодов\n' + '\n'.join(added)
-            else:
-                msg = f'ℹ️ {code}: новых эпизодов не найдено'
+                check_anilibria_show(code)
         except Exception as e:
-            msg = f'❌ {code}: ошибка при проверке: {e}'
             logger.error(f'Immediate check failed for {code}: {e}')
-
-        try:
-            base = os.environ.get('TG_BOT_API_URL', 'https://api.telegram.org')
-            token = self.app.bot.token
-            requests.post(
-                f'{base}/bot{token}/sendMessage',
-                data={'chat_id': chat_id, 'text': msg},
-                timeout=10,
-            )
-        except Exception as e:
-            logger.error(f'Failed to send check result: {e}')
+            try:
+                import requests
+                base = os.environ.get('TG_BOT_API_URL', 'https://api.telegram.org')
+                token = self.app.bot.token
+                requests.post(
+                    f'{base}/bot{token}/sendMessage',
+                    data={'chat_id': chat_id, 'text': f'❌ {code}: ошибка при проверке: {e}'},
+                    timeout=10,
+                )
+            except Exception:
+                pass
 
 
 def main():

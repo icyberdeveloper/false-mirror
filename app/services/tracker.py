@@ -84,7 +84,7 @@ class Tracker:
                 nas_path = save_path.replace(qbt_download_dir, nas_library_dir, 1)
 
                 if self._has_video_files(nas_path):
-                    self._notify(f'✅ <b>{label}</b>\nСкачан и на NAS')
+                    logger.info(f'Tracker: verified {label} on NAS')
                     self.db.update({'status': 'verified'}, (q.label == label) & (q.save_path == save_path))
                 else:
                     if not record.get('alerted'):
