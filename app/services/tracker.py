@@ -69,7 +69,7 @@ class Tracker:
                 # Torrent disappeared from qBittorrent
                 age = int(time.time()) - added_at
                 if age > STALL_THRESHOLD and not record.get('alerted'):
-                    self._alert(f'⚠️ <b>{label}</b>\nТоррент пропал из qBittorrent')
+                    self._alert(f'⚠️ <b>{label}</b>\nTorrent disappeared from qBittorrent')
                     self.db.update({'alerted': True}, (q.label == label) & (q.save_path == save_path))
                 continue
 
@@ -88,14 +88,14 @@ class Tracker:
                     self.db.update({'status': 'verified'}, (q.label == label) & (q.save_path == save_path))
                 else:
                     if not record.get('alerted'):
-                        self._alert(f'⚠️ <b>{label}</b>\nСкачан, но НЕ перемещён на NAS\nПуть: {nas_path}')
+                        self._alert(f'⚠️ <b>{label}</b>\nDownloaded but NOT moved to NAS\nPath: {nas_path}')
                         self.db.update({'alerted': True}, (q.label == label) & (q.save_path == save_path))
 
             # Problem state?
             elif states & PROBLEM_STATES:
                 if not record.get('alerted'):
                     state_str = ', '.join(states)
-                    self._alert(f'⚠️ <b>{label}</b>\nПроблема с торрентом: {state_str}')
+                    self._alert(f'⚠️ <b>{label}</b>\nTorrent problem: {state_str}')
                     self.db.update({'alerted': True}, (q.label == label) & (q.save_path == save_path))
 
             # Still downloading — check if stuck
@@ -103,7 +103,7 @@ class Tracker:
                 age = int(time.time()) - added_at
                 if age > STALL_THRESHOLD and not record.get('alerted'):
                     progress_pct = max(progresses) * 100
-                    self._alert(f'⚠️ <b>{label}</b>\nКачается уже {age // 3600}ч, прогресс: {progress_pct:.0f}%')
+                    self._alert(f'⚠️ <b>{label}</b>\nStalled for {age // 3600}h, progress: {progress_pct:.0f}%')
                     self.db.update({'alerted': True}, (q.label == label) & (q.save_path == save_path))
 
     @staticmethod

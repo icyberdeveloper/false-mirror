@@ -22,9 +22,9 @@ LIBRARY_ROOT = '/library'
 VIDEO_EXTENSIONS = {'.mkv', '.avi', '.mp4', '.ts', '.m4v'}
 PATH_MAP_MAX_SIZE = 5000
 BROWSE_ROOTS = {
-    'Сериалы': '/library/TV Shows',
-    'Фильмы': '/library/Movies',
-    'Аниме': '/library/Anime',
+    'TV Shows': '/library/TV Shows',
+    'Movies': '/library/Movies',
+    'Anime': '/library/Anime',
 }
 MAX_FILE_SIZE = 2 * 1024 * 1024 * 1024  # 2GB
 
@@ -74,7 +74,7 @@ class Bot:
 
         if lf_movie:
             code = lf_movie.group(1)
-            await update.message.reply_text(f'LostFilm movie: {code}\nСкачиваю...')
+            await update.message.reply_text(f'Movie added: {code}')
             threading.Thread(
                 target=self._check_and_reply,
                 args=(update.effective_chat.id, 'lostfilm_movie', code),
@@ -84,7 +84,7 @@ class Bot:
         elif lf_match:
             code = lf_match.group(1)
             self.db.save_new_lostfilm_code(code)
-            await update.message.reply_text(f'Added LostFilm show: {code}\nЗапускаю проверку...')
+            await update.message.reply_text(f'Show added: {code}')
             threading.Thread(
                 target=self._check_and_reply,
                 args=(update.effective_chat.id, 'lostfilm', code),
@@ -94,7 +94,7 @@ class Bot:
         elif al_match:
             code = al_match.group(1)
             self.db.save_new_anilibria_code(code)
-            await update.message.reply_text(f'Added Anilibria show: {code}\nЗапускаю проверку...')
+            await update.message.reply_text(f'Show added: {code}')
             threading.Thread(
                 target=self._check_and_reply,
                 args=(update.effective_chat.id, 'anilibria', code),
@@ -102,7 +102,7 @@ class Bot:
             ).start()
 
         else:
-            await update.message.reply_text('Unsupported link. Use LostFilm or Anilibria URLs.')
+            await update.message.reply_text('Unsupported link. Use LostFilm or Anilibria URL.')
 
     async def cmd_list(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         lf_codes = self.db.get_lostfilm_codes()
@@ -128,9 +128,9 @@ class Bot:
             if os.path.isdir(path):
                 buttons.append([InlineKeyboardButton(label, callback_data=f'b:{self._short_id(path)}')])
         if not buttons:
-            await update.message.reply_text('Библиотека пуста.')
+            await update.message.reply_text('Library is empty.')
             return
-        await update.message.reply_text('📺 Библиотека:', reply_markup=InlineKeyboardMarkup(buttons))
+        await update.message.reply_text('📺 Library:', reply_markup=InlineKeyboardMarkup(buttons))
 
     def _short_id(self, path):
         """Map a path to a short ID for callback_data (64 byte limit)."""
@@ -153,13 +153,13 @@ class Bot:
             for label, path in BROWSE_ROOTS.items():
                 if os.path.isdir(path):
                     buttons.append([InlineKeyboardButton(label, callback_data=f'b:{self._short_id(path)}')])
-            await query.edit_message_text('📺 Библиотека:', reply_markup=InlineKeyboardMarkup(buttons))
+            await query.edit_message_text('📺 Library:', reply_markup=InlineKeyboardMarkup(buttons))
             return
 
         prefix, sid = data.split(':', 1)
         rel_path = self._path_map.get(sid)
         if not rel_path:
-            await query.edit_message_text('Сессия истекла. Нажми /browse заново.')
+            await query.edit_message_text('Session expired. Tap /browse again.')
             return
 
         if prefix == 'b':
@@ -170,7 +170,7 @@ class Bot:
     async def _browse_dir(self, query, abs_path):
         """Browse a directory, show subdirs and video files."""
         if not os.path.isdir(abs_path):
-            await query.edit_message_text('Папка не найдена.')
+            await query.edit_message_text('Folder not found.')
             return
 
         entries = sorted(os.listdir(abs_path))
@@ -198,12 +198,12 @@ class Bot:
         # Only show back if not at a root level
         is_root = abs_path in BROWSE_ROOTS.values()
         if not is_root:
-            buttons.append([InlineKeyboardButton('⬅️ Назад', callback_data=f'b:{self._short_id(parent)}')])
+            buttons.append([InlineKeyboardButton('⬅️ Back', callback_data=f'b:{self._short_id(parent)}')])
         else:
-            buttons.append([InlineKeyboardButton('⬅️ Назад', callback_data='b:__root__')])
+            buttons.append([InlineKeyboardButton('⬅️ Back', callback_data='b:__root__')])
 
         if not dirs and not files:
-            await query.edit_message_text(f'📂 {os.path.basename(abs_path)}\n\nПусто.')
+            await query.edit_message_text(f'📂 {os.path.basename(abs_path)}\n\nEmpty.')
             return
 
         title = os.path.basename(abs_path)
@@ -218,7 +218,7 @@ class Bot:
         import tempfile
 
         if not os.path.isfile(abs_path):
-            await query.edit_message_text('Файл не найден.')
+            await query.edit_message_text('File not found.')
             return
 
         filename = os.path.basename(abs_path)
@@ -243,7 +243,7 @@ class Bot:
             needs_remux = ext in {'.mkv', '.ts', '.m4v'} and video_codec in ('h264', 'hevc')
             needs_reencode = ext in VIDEO_EXTENSIONS and video_codec not in ('h264', 'hevc')
 
-            await query.edit_message_text(f'⏳ Подготовка...')
+            await query.edit_message_text(f'⏳ Preparing...')
 
             if needs_remux:
                 # Fast remux — copy codec, change container to MP4 (instant)
@@ -326,7 +326,7 @@ class Bot:
                         width, height = int(parts3[0]), int(parts3[1])
                 else:
                     logger.error(f'Compression failed: {result.stderr[-300:]}')
-                    await query.edit_message_text('❌ Не удалось сжать файл')
+                    await query.edit_message_text('❌ Failed to compress file')
                     return
 
             size = os.path.getsize(send_path)
@@ -351,7 +351,7 @@ class Bot:
         except Exception as e:
             logger.error(f'Failed to send file {abs_path}: {e}')
             chat_id = query.message.chat_id
-            await query.get_bot().send_message(chat_id=chat_id, text=f'❌ Ошибка отправки: {e}')
+            await query.get_bot().send_message(chat_id=chat_id, text=f'❌ Send failed: {e}')
         finally:
             if tmp_path and os.path.isfile(tmp_path):
                 os.remove(tmp_path)
@@ -375,7 +375,7 @@ class Bot:
                 token = self.app.bot.token
                 requests.post(
                     f'{base}/bot{token}/sendMessage',
-                    data={'chat_id': chat_id, 'text': f'❌ {code}: ошибка при проверке: {e}'},
+                    data={'chat_id': chat_id, 'text': f'❌ {code}: check failed: {e}'},
                     timeout=10,
                 )
             except Exception:
