@@ -53,9 +53,15 @@ def run_maintenance():
     try:
         cfg, db, library, tracker, qbt = _load_env()
         renamer = Renamer(cfg.renamer.root_dir, cfg.renamer.anilibria_regex)
-        renamer.rename()
+        unmatched = renamer.rename()
+        if unmatched:
+            msg = '⚠️ Renamer: unrecognized files (invisible to Plex):\n'
+            msg += '\n'.join(f'• {os.path.basename(f)}' for f in unmatched[:10])
+            if len(unmatched) > 10:
+                msg += f'\n...and {len(unmatched) - 10} more'
+            tracker._alert(msg)
         tracker.check(
-            qbt.client, cfg.renamer.root_dir + '/TV Shows',
+            qbt.client, cfg.renamer.root_dir,
             qbt_download_dir=cfg.qbittorrent.download_dir.rsplit('/', 1)[0],  # /downloads
             nas_library_dir=cfg.renamer.root_dir,  # /library
         )

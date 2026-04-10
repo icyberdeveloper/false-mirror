@@ -44,17 +44,22 @@ class Library:
 
     def season_has_files(self, show_name, release_year, season_num):
         """Check if a season directory has any video files (for full-season torrents)."""
+        return self.count_season_files(show_name, release_year, season_num) > 0
+
+    def count_season_files(self, show_name, release_year, season_num):
+        """Count video files in a season directory."""
         season_dir = os.path.join(
             self.library_dir, f'{show_name} ({release_year})', f'Season {season_num}'
         )
         if not os.path.isdir(season_dir):
-            return False
+            return 0
 
+        count = 0
         for filename in os.listdir(season_dir):
             ext = os.path.splitext(filename)[1].lower()
             if ext in VIDEO_EXTENSIONS:
-                return True
-        return False
+                count += 1
+        return count
 
 
 def _has_matching_file(directory, pattern):

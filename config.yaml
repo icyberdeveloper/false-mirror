@@ -10,6 +10,7 @@ qbittorrent:
   username: 'admin'
   password: 'adminadmin'
   download_dir: '/downloads/TV Shows'
+  anime_dir: '/downloads/Anime'
   movies_dir: '/downloads/Movies'
   incomplete_dir: '/incomplete'
 
@@ -26,7 +27,7 @@ lostfilm:
 renamer:
   root_dir: '/library'
   anilibria:
-    regex: '(?P<name>\w+)_\[(?P<episode>\d{2})]_\[\w+]_\[\w+]\.mkv'
+    regex: '(?P<name>.+)_\[(?P<episode>\d{2})(?:_\w+)?\](?:_\[[^\]]+\])*\.mkv'
 
 nocronbot:
   token: ''  # set via TG_BOT_TOKEN env var

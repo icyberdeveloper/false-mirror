@@ -68,6 +68,17 @@ class QBittorrent:
                     return True
         return False
 
+    def torrent_hash_in_queue(self, torrent_hash):
+        """Check if a torrent with this hash exists in qBittorrent (any state)."""
+        if not torrent_hash:
+            return False
+        self._ensure_fresh_index()
+        for name, entries in self._torrents_by_name.items():
+            for entry in entries:
+                if entry['hash'] == torrent_hash:
+                    return True
+        return False
+
     def download_torrent(self, torrent_url, save_path, proxies=None, tracker=None, label=None):
         logger.info(f'Downloading torrent: {torrent_url}')
         response = network.get(torrent_url, proxies=proxies)

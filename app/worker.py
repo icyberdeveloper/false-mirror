@@ -73,11 +73,14 @@ def check_anilibria_show(code):
     """Check one Anilibria show for new episodes. Fully isolated."""
     try:
         cfg, db, library, tracker, qbt = _load_env()
+        library_anime = Library(
+            library_dir=cfg.renamer.root_dir + '/Anime',
+            incomplete_dir=cfg.qbittorrent.incomplete_dir,
+        )
         codes = [{'code': code}]
         added = anilibria.get_series(
-            library, qbt, cfg.qbittorrent.download_dir,
-            cfg.anilibria.torrent_mirror, cfg.anilibria.api_mirror,
-            codes, cfg.proxy.as_dict, tracker=tracker,
+            library_anime, qbt, cfg.qbittorrent.anime_dir,
+            codes, cfg.proxy.as_dict, tracker=tracker, db=db,
         )
         logger.info(f'Anilibria [{code}]: added {len(added)} episodes')
         return added
