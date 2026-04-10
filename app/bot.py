@@ -70,7 +70,7 @@ class Bot:
 
         lf_match = re.search(r'lostfilm\.\w+/series/([^/?#]+)', url)
         lf_movie = re.search(r'lostfilm\.\w+/movies/([^/?#]+)', url)
-        al_match = re.search(r'anilibria\.\w+/release/([^/.?#]+)', url)
+        al_match = re.search(r'anilibria\.\w+/(?:anime/releases/)?release/([^/.?#]+)', url)
 
         if lf_movie:
             code = lf_movie.group(1)
