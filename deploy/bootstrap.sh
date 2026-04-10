@@ -120,18 +120,33 @@ systemctl enable --now healthcheck.timer
 # ============================================
 echo "[6/6] Starting false-mirror..."
 
+# Restore Docker daemon config (IPv6 disabled for Docker Hub)
+cp "$BACKUP_DIR/system/daemon.json" /etc/docker/daemon.json 2>/dev/null || true
+systemctl restart docker
+
 # Restore compose.yml with secrets
 cp "$BACKUP_DIR/compose.yml" /app/false-mirror/deploy/compose.yml
 
 cd /app/false-mirror/deploy
-docker-compose build
+docker-compose pull
 docker-compose up -d
 
 # ============================================
 # 9. Backup cron
 # ============================================
+# Restore backup script from repo
+cp /app/false-mirror/deploy/backup-to-nas.sh /usr/local/bin/backup-to-nas.sh
+chmod +x /usr/local/bin/backup-to-nas.sh
 (crontab -l 2>/dev/null | grep -v backup-to-nas; echo "0 4 * * * /usr/local/bin/backup-to-nas.sh >> /var/log/backup-to-nas.log 2>&1") | crontab -
-cp /usr/local/bin/backup-to-nas.sh /usr/local/bin/backup-to-nas.sh 2>/dev/null || true
+
+# ============================================
+# 10. Claude Code memory
+# ============================================
+if [ -d "$BACKUP_DIR/claude" ]; then
+    echo "Restoring Claude Code memory..."
+    mkdir -p /root/.claude
+    cp -a "$BACKUP_DIR/claude/." /root/.claude/
+fi
 
 echo ""
 echo "============================================"
