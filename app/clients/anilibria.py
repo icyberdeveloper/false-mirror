@@ -14,6 +14,7 @@ def get_series(library, qbittorrent, download_dir, codes, proxies, tracker=None,
     auto-register any unknown sibling seasons in the DB (they'll get their own
     scheduler slot on the next cycle)."""
     added = []
+    new_siblings = []
     logger.info(f'Anilibria: processing {len(codes)} shows')
 
     for item in codes:
@@ -40,14 +41,15 @@ def get_series(library, qbittorrent, download_dir, codes, proxies, tracker=None,
             release_id = release['id']
             franchise_name, season_num, base_year, all_releases = _get_franchise_info(release_id, release, proxies)
 
-            # Auto-track sibling TV seasons from franchise (they get their own scheduler slots)
+            # Auto-track sibling TV seasons from franchise
             if db and all_releases:
                 for fr in all_releases:
                     rel = fr.get('release', {})
                     sibling_alias = rel.get('alias')
                     sibling_type = rel.get('type', {}).get('value')
                     if sibling_alias and sibling_alias != code and sibling_type == 'TV':
-                        db.save_new_anilibria_code(sibling_alias)
+                        if db.save_new_anilibria_code(sibling_alias):
+                            new_siblings.append(sibling_alias)
 
             # Check only THIS release
             best = _get_best_quality(torrents)
@@ -75,6 +77,16 @@ def get_series(library, qbittorrent, download_dir, codes, proxies, tracker=None,
 
         except Exception as e:
             logger.error(f'Anilibria: error processing {code}: {e}')
+
+    # Immediately check newly discovered sibling seasons
+    if new_siblings:
+        logger.info(f'Anilibria: checking {len(new_siblings)} new sibling seasons')
+        sibling_added = get_series(
+            library, qbittorrent, download_dir,
+            [{'code': s} for s in new_siblings], proxies,
+            tracker=tracker, db=None,  # db=None to avoid infinite recursion
+        )
+        added.extend(sibling_added)
 
     return added
 

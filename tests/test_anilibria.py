@@ -280,22 +280,25 @@ class TestGetSeries(unittest.TestCase):
         assert added == []
         self.qbt.download_torrent.assert_not_called()
 
-    def test_auto_tracks_sibling_tv_seasons(self):
+    def test_auto_tracks_and_checks_sibling_tv_seasons(self):
         release = _make_release(id=9600)
         franchise = _make_franchise(releases=[
             _make_franchise_release(9600, 1, 'test-anime-s1', type_value='TV'),
             _make_franchise_release(9839, 2, 'test-anime-s2', type_value='TV'),
             _make_franchise_release(9999, 3, 'test-anime-ova', type_value='OVA'),
         ])
-        self.library.count_season_files.return_value = 12
+        self.library.count_season_files.return_value = 0
         self.qbt.torrent_hash_in_queue.return_value = False
+        self.db.save_new_anilibria_code.return_value = True
 
         with self._patch_api(release, franchise):
-            get_series(self.library, self.qbt, '/downloads/Anime',
+            added = get_series(self.library, self.qbt, '/downloads/Anime',
                        [{'code': 'test-anime-s1'}], None, db=self.db)
 
         # Should track S2 (TV) but NOT OVA
         self.db.save_new_anilibria_code.assert_called_once_with('test-anime-s2')
+        # Should download both S1 and S2 immediately
+        assert len(added) == 2
 
     def test_does_not_auto_track_self(self):
         release = _make_release(id=9600)
@@ -303,6 +306,7 @@ class TestGetSeries(unittest.TestCase):
             _make_franchise_release(9600, 1, 'test-anime', type_value='TV'),
         ])
         self.library.count_season_files.return_value = 12
+        self.db.save_new_anilibria_code.return_value = False
 
         with self._patch_api(release, franchise):
             get_series(self.library, self.qbt, '/downloads/Anime',

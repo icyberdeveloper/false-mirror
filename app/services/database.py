@@ -21,4 +21,6 @@ class Database:
         q = Query()
         if not self.anilibria.search(q.code == code):
             self.anilibria.insert({'code': code})
+            return True
+        return False
 
