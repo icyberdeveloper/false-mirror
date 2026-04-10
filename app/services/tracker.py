@@ -84,8 +84,14 @@ class Tracker:
                 nas_path = save_path.replace(qbt_download_dir, nas_library_dir, 1)
 
                 if self._has_video_files(nas_path):
-                    logger.info(f'Tracker: verified {label} on NAS')
+                    logger.info(f'Tracker: verified {label} on NAS, removing torrent')
                     self.db.update({'status': 'verified'}, (q.label == label) & (q.save_path == save_path))
+                    # Remove torrent from qBittorrent (keep files on NAS)
+                    for t in matching:
+                        try:
+                            qbt_client.delete(t['hash'])
+                        except Exception as e:
+                            logger.warning(f'Tracker: failed to remove torrent {label}: {e}')
                 else:
                     if not record.get('alerted'):
                         self._alert(f'⚠️ <b>{label}</b>\nDownloaded but NOT moved to NAS\nPath: {nas_path}')
