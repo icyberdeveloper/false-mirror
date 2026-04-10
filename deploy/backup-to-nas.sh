@@ -2,7 +2,6 @@
 set -euo pipefail
 
 BACKUP_DIR="/mnt/backups/server"
-DATE=$(date +%Y%m%d)
 
 mkdir -p "$BACKUP_DIR"
 
@@ -22,6 +21,15 @@ cp /etc/systemd/system/healthcheck.timer "$BACKUP_DIR/system/"
 cp /etc/auto.master.d/mnt.autofs "$BACKUP_DIR/system/"
 cp /etc/auto.mnt "$BACKUP_DIR/system/"
 cp /etc/systemd/system/awg-quick@.service "$BACKUP_DIR/system/"
+
+# Docker daemon config
+cp /etc/docker/daemon.json "$BACKUP_DIR/system/" 2>/dev/null || true
+
+# Claude Code memory
+if [ -d /root/.claude ]; then
+    mkdir -p "$BACKUP_DIR/claude"
+    cp -a /root/.claude/. "$BACKUP_DIR/claude/"
+fi
 
 # Compose (contains secrets)
 cp /app/false-mirror/deploy/compose.yml "$BACKUP_DIR/compose.yml"

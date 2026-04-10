@@ -26,13 +26,18 @@ fi
 # ============================================
 # 1. System packages
 # ============================================
-echo "[1/6] Installing packages..."
+echo "[1/7] Installing packages..."
 apt update
 apt install -y \
     docker.io docker-compose \
     autofs nfs-common \
-    curl wget \
+    curl wget dnsutils \
     software-properties-common
+
+# Restore Docker daemon config before Docker starts for the first time
+# (disables IPv6 which breaks Docker Hub pulls through VPN)
+cp "$BACKUP_DIR/system/daemon.json" /etc/docker/daemon.json 2>/dev/null || true
+systemctl restart docker
 
 # ============================================
 # 2. AmneziaWG VPN
@@ -119,10 +124,6 @@ systemctl enable --now healthcheck.timer
 # 8. false-mirror (Docker)
 # ============================================
 echo "[6/6] Starting false-mirror..."
-
-# Restore Docker daemon config (IPv6 disabled for Docker Hub)
-cp "$BACKUP_DIR/system/daemon.json" /etc/docker/daemon.json 2>/dev/null || true
-systemctl restart docker
 
 # Restore compose.yml with secrets
 cp "$BACKUP_DIR/compose.yml" /app/false-mirror/deploy/compose.yml
