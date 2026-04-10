@@ -113,7 +113,7 @@ cp -a "$BACKUP_DIR/storage/." /storage/
 # 7. Healthcheck
 # ============================================
 echo "[5/6] Setting up healthcheck..."
-cp "$BACKUP_DIR/system/healthcheck.sh" /usr/local/bin/healthcheck.sh
+cp /app/false-mirror/deploy/healthcheck.sh /usr/local/bin/healthcheck.sh
 chmod +x /usr/local/bin/healthcheck.sh
 cp "$BACKUP_DIR/system/healthcheck.service" /etc/systemd/system/
 cp "$BACKUP_DIR/system/healthcheck.timer" /etc/systemd/system/
