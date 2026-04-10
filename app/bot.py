@@ -44,8 +44,16 @@ class Bot:
         self.app.add_handler(CommandHandler('browse', self.cmd_browse))
         self.app.add_handler(CallbackQueryHandler(self.on_callback))
 
+    async def _post_init(self, app):
+        await app.bot.set_my_commands([
+            ('download', 'Add a show or movie by URL'),
+            ('list', 'Show tracked series'),
+            ('browse', 'Browse library on NAS'),
+        ])
+
     def run(self):
         logger.info('Bot started polling...')
+        self.app.post_init = self._post_init
         self.app.run_polling(allowed_updates=Update.ALL_TYPES)
 
     # --- Commands ---
