@@ -14,13 +14,19 @@ class Database:
 
     def save_new_lostfilm_code(self, code):
         q = Query()
-        if not self.lostfilm.search(q.code == code):
-            self.lostfilm.insert({'code': code})
+        try:
+            if not self.lostfilm.search(q.code == code):
+                self.lostfilm.insert({'code': code})
+        except ValueError:
+            pass  # race condition with concurrent writer
 
     def save_new_anilibria_code(self, code):
         q = Query()
-        if not self.anilibria.search(q.code == code):
-            self.anilibria.insert({'code': code})
-            return True
+        try:
+            if not self.anilibria.search(q.code == code):
+                self.anilibria.insert({'code': code})
+                return True
+        except ValueError:
+            pass  # race condition with concurrent writer
         return False
 
