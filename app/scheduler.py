@@ -52,7 +52,7 @@ def run_maintenance():
     """Run renamer and tracker verification."""
     try:
         cfg, db, library, tracker, qbt = _load_env()
-        renamer = Renamer(cfg.renamer.root_dir, cfg.renamer.anilibria_regex)
+        renamer = Renamer(cfg.renamer.root_dir + '/Anime', cfg.renamer.anilibria_regex)
         unmatched = renamer.rename()
         if unmatched:
             msg = '⚠️ Renamer: unrecognized files (invisible to Plex):\n'
