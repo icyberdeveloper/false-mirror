@@ -79,9 +79,9 @@ class QBittorrent:
                     return True
         return False
 
-    def download_torrent(self, torrent_url, save_path, proxies=None, tracker=None, label=None):
+    def download_torrent(self, torrent_url, save_path, proxies=None, tracker=None, label=None, bind_device=None):
         logger.info(f'Downloading torrent: {torrent_url}')
-        response = network.get(torrent_url, proxies=proxies)
+        response = network.get(torrent_url, proxies=proxies, bind_device=bind_device)
         self.client.download_from_file(response.content, save_path=save_path)
         logger.info(f'Added to qBittorrent -> {save_path}')
         if tracker and label:

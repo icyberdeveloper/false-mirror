@@ -7,6 +7,9 @@ from services import network
 logger = logging.getLogger(__name__)
 
 API_BASE = 'https://anilibria.top/api/v1'
+# AniLibria blocks VPN IPs but shares Cloudflare IPs with LostFilm,
+# so we can't use IP routing. Instead, bind directly to LAN interface.
+BIND_DEVICE = 'enp114s0'
 
 
 def get_series(library, qbittorrent, download_dir, codes, proxies, tracker=None, db=None):
@@ -72,7 +75,7 @@ def get_series(library, qbittorrent, download_dir, codes, proxies, tracker=None,
             if disk_count > 0:
                 logger.info(f'Anilibria: {franchise_name} S{season_num} has {disk_count} eps, torrent has {torrent_episodes} — updating')
 
-            qbittorrent.download_torrent(torrent_url, download_path, proxies, tracker=tracker, label=label)
+            qbittorrent.download_torrent(torrent_url, download_path, tracker=tracker, label=label, bind_device=BIND_DEVICE)
             added.append(label)
             logger.info(f'Anilibria: queued {label}')
 
@@ -94,7 +97,7 @@ def get_series(library, qbittorrent, download_dir, codes, proxies, tracker=None,
 
 def _get_release(code, proxies):
     url = f'{API_BASE}/anime/releases/{code}'
-    res = network.get(url, proxies=proxies)
+    res = network.get(url, bind_device=BIND_DEVICE)
     return res.json()
 
 
@@ -108,7 +111,7 @@ def _get_franchise_info(release_id, release, proxies):
 
     try:
         url = f'{API_BASE}/anime/franchises/release/{release_id}'
-        res = network.get(url, proxies=proxies)
+        res = network.get(url, bind_device=BIND_DEVICE)
         franchises = res.json()
 
         if not franchises:

@@ -83,34 +83,7 @@ else
     ((errors++))
 fi
 
-# 3. Anilibria route (bypass VPN for anilibria.top Cloudflare IPs)
-name="anilibria_route"
-current_ips=$(dig +short anilibria.top A 2>/dev/null | sort)
-if [ -n "$current_ips" ]; then
-    routed_file="$STATE_DIR/anilibria_ips"
-    routed_ips=""
-    [ -f "$routed_file" ] && routed_ips=$(cat "$routed_file")
-
-    if [ "$current_ips" != "$routed_ips" ]; then
-        # Remove old routes
-        if [ -n "$routed_ips" ]; then
-            while IFS= read -r old_ip; do
-                ip route del "$old_ip/32" via 192.168.1.1 dev enp114s0 2>/dev/null || true
-            done <<< "$routed_ips"
-        fi
-        # Add new routes
-        while IFS= read -r new_ip; do
-            ip route replace "$new_ip/32" via 192.168.1.1 dev enp114s0 2>/dev/null || true
-        done <<< "$current_ips"
-        echo "$current_ips" > "$routed_file"
-        send_alert "Anilibria IPs changed, routes updated: $(echo $current_ips | tr '\n' ' ')"
-    fi
-    recover "$name" "Anilibria DNS resolved OK"
-else
-    check_and_alert "$name" "Cannot resolve anilibria.top DNS"
-fi
-
-# 4. qBittorrent API (403 Forbidden = alive, just unauthenticated)
+# 3. qBittorrent API (403 Forbidden = alive, just unauthenticated)
 name="qbittorrent"
 qb_http_code=$(curl -so /dev/null -w '%{http_code}' --max-time 5 "$QB_URL" 2>/dev/null || echo "000")
 if [ "$qb_http_code" != "000" ]; then
