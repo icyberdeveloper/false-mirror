@@ -28,8 +28,9 @@ def get_series(library, qbittorrent, download_dir, codes, proxies, tracker=None,
                 logger.warning(f'Anilibria: not found or unavailable: {code}')
                 continue
 
-            if release.get('type', {}).get('value') != 'TV':
-                logger.warning(f'Anilibria: skipping non-TV type: {code}')
+            release_type = release.get('type', {}).get('value')
+            if release_type not in ('TV', 'ONA'):
+                logger.warning(f'Anilibria: skipping type {release_type}: {code}')
                 continue
 
             torrents = release.get('torrents')
@@ -41,13 +42,13 @@ def get_series(library, qbittorrent, download_dir, codes, proxies, tracker=None,
             release_id = release['id']
             franchise_name, season_num, base_year, all_releases = _get_franchise_info(release_id, release, proxies)
 
-            # Auto-track sibling TV seasons from franchise
+            # Auto-track sibling seasons from franchise (TV and ONA only)
             if db and all_releases:
                 for fr in all_releases:
                     rel = fr.get('release', {})
                     sibling_alias = rel.get('alias')
                     sibling_type = rel.get('type', {}).get('value')
-                    if sibling_alias and sibling_alias != code and sibling_type == 'TV':
+                    if sibling_alias and sibling_alias != code and sibling_type in ('TV', 'ONA'):
                         if db.save_new_anilibria_code(sibling_alias):
                             new_siblings.append(sibling_alias)
 
