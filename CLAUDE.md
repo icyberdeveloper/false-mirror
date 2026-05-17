@@ -20,10 +20,10 @@ git clone https://github.com/icyberdeveloper/false-mirror /app/false-mirror
 bash /app/false-mirror/deploy/bootstrap.sh
 ```
 
-Скрипт `deploy/bootstrap.sh` восстановит: VPN (AmneziaWG), autofs (NAS), healthcheck, storage (TinyDB, qBittorrent config), Docker-контейнеры (false-mirror + bot + qBittorrent), backup cron. Все конфиги и секреты берёт из бэкапа на NAS (`/mnt/backups/server/`).
+Скрипт `deploy/bootstrap.sh` восстановит: VPN (AmneziaWG), autofs (NAS), healthcheck, storage (TinyDB, qBittorrent config), Docker-контейнеры (false-mirror + bot + qBittorrent + telegram-bot-api), backup cron. Все конфиги и секреты берёт из бэкапа на NAS (`/mnt/backups/server/`).
 
 После запуска проверить:
-1. `docker-compose ps` — три контейнера Up
+1. `docker-compose ps` — четыре контейнера Up
 2. `awg show awg0` — VPN tunnel active
 3. `ls /mnt/library/TV Shows/` — NAS доступен
 4. `systemctl status healthcheck.timer` — healthcheck активен
@@ -43,7 +43,7 @@ bash /app/false-mirror/deploy/bootstrap.sh
 | Интерфейс | Сеть | Назначение |
 |---|---|---|
 | `enp114s0` | `192.168.1.34/24` | Физическая LAN, доступ к NAS (`192.168.1.150`) |
-| `awg0` | `10.8.0.4/24` | AmneziaWG VPN, весь внешний трафик через `35.228.37.21:51820` |
+| `awg0` | `10.8.0.4/24` | AmneziaWG VPN, весь внешний трафик через `35.217.7.167:51820` |
 
 VPN маршрутизация: `AllowedIPs = 0.0.0.0/0` (весь трафик через VPN). Локальная сеть `192.168.1.0/24` доступна напрямую через `enp114s0` (kernel route priority). При восстановлении bootstrap добавляет явный маршрут до локалки.
 
@@ -69,10 +69,11 @@ Sends alerts to Telegram (bot token from compose.yml, chat_id `197650166`). Stat
 
 ### Docker Compose (`/app/false-mirror/deploy/compose.yml`)
 
-Three containers, all `network_mode: host`:
+Four containers, all `network_mode: host`:
 - `qbittorrent` — linuxserver image, WebUI on `:8080`, torrenting on `:6882`
 - `false-mirror` — scheduler (periodic checks)
 - `nocron` (bot) — Telegram bot (immediate checks on `/download`)
+- `telegram-bot-api` — local Telegram Bot API server (aiogram image, `TELEGRAM_LOCAL=1`) for larger upload limits; bot (`nocron`) depends on it
 
 ```bash
 cd /app/false-mirror/deploy
