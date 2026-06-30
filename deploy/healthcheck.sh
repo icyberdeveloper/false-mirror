@@ -90,8 +90,8 @@ if [ "$qb_http_code" != "000" ]; then
     recover "$name" "qBittorrent is back"
 else
     check_and_alert "$name" "qBittorrent is not responding"
-    # Try restart container
-    docker-compose restart qbittorrent 2>/dev/null || true
+    # Try (re)create container — `up -d` handles both stopped and missing
+    docker-compose up -d qbittorrent 2>/dev/null || true
     ((errors++))
 fi
 
@@ -118,12 +118,17 @@ else
 fi
 
 # 7. Docker containers
-for svc in false-mirror nocron qbittorrent; do
+# After Docker daemon starts before autofs is ready, bind-mounts to /mnt/*
+# fail and containers stay in Exited (127) — `restart: unless-stopped` gives
+# up after a few retries. `up -d` recreates the container and brings it back.
+running_containers=$(docker ps --format '{{.Names}}')
+for svc in false-mirror nocron qbittorrent telegram-bot-api; do
     name="docker_${svc}"
-    if docker ps --format '{{.Names}}' | grep -q "^${svc}$"; then
+    if grep -qx "${svc}" <<<"$running_containers"; then
         recover "$name" "Container <b>${svc}</b> is back"
     else
         check_and_alert "$name" "Container <b>${svc}</b> is not running"
+        docker-compose up -d "$svc" 2>/dev/null || true
         ((errors++))
     fi
 done
